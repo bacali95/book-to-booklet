@@ -56,7 +56,7 @@ function Section({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="rounded-[10px] border border-line bg-e2 overflow-hidden">
+    <div className="rounded-[10px] border border-line bg-e2">
       <button
         onClick={() => setOpen((o) => !o)}
         className="w-full flex justify-between items-center px-3 py-2.5 bg-transparent border-none cursor-pointer text-fg hover:bg-e3 transition-colors"
