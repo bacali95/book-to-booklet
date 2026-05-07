@@ -8,18 +8,30 @@ import { LANGUAGES, RTL_LANGS, type LangCode } from "./i18n";
 export default function App() {
   const { t, i18n } = useTranslation();
 
-  const [theme, setTheme] = useState<"dark" | "light">(() => {
+  const [theme, setTheme] = useState<"dark" | "light" | "system">(() => {
     const s = localStorage.getItem("theme");
-    if (s === "dark" || s === "light") return s;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light";
+    if (s === "dark" || s === "light" || s === "system") return s;
+    return "system";
   });
 
+  const [systemDark, setSystemDark] = useState(
+    () => window.matchMedia("(prefers-color-scheme: dark)").matches,
+  );
+
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  const resolvedTheme =
+    theme === "system" ? (systemDark ? "dark" : "light") : theme;
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = resolvedTheme;
     localStorage.setItem("theme", theme);
-  }, [theme]);
+  }, [resolvedTheme, theme]);
 
   useEffect(() => {
     document.documentElement.dir = RTL_LANGS.has(i18n.language) ? "rtl" : "ltr";
@@ -157,37 +169,29 @@ export default function App() {
             </svg>
           </div>
 
-          {/* Theme toggle */}
+          {/* Theme toggle: light → dark → system → light */}
           <button
-            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            onClick={() =>
+              setTheme((t) =>
+                t === "light" ? "dark" : t === "dark" ? "system" : "light",
+              )
+            }
+            title={theme}
             className="w-8 h-8 rounded-lg border border-transparent bg-transparent text-fg2 grid place-items-center cursor-pointer hover:bg-e2 hover:border-line transition-all"
           >
-            {theme === "dark" ? (
-              <svg
-                width={15}
-                height={15}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+            {theme === "light" ? (
+              <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="4" />
                 <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
               </svg>
-            ) : (
-              <svg
-                width={15}
-                height={15}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+            ) : theme === "dark" ? (
+              <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            ) : (
+              <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <path d="M8 21h8M12 17v4" />
               </svg>
             )}
           </button>
