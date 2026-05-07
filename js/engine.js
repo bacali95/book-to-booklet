@@ -10,35 +10,25 @@ const BookletEngine = (() => {
         Tabloid: { w: 792,     h: 1224    },
     };
 
-    // Compute which source pages (0-indexed, -1=blank) go on each output sheet.
-    // Returns array of { sigIndex, sheetIndex, front:{left,right}, back:{left,right} }
-    function computeLayout(pageCount, opts = {}) {
-        const { signatureSize = 4, direction = 'ltr' } = opts;
+    function getPaperSize(name) { return PAPER_SIZES[name] || PAPER_SIZES.A4; }
 
-        // 0 = "all-in-one": use a single signature covering the whole book
-        const S = signatureSize === 0
-            ? Math.ceil(pageCount / 4) * 4
-            : signatureSize;
-
-        const padded    = Math.ceil(pageCount / S) * S;
-        const numSig    = padded / S;
-        const shPerSig  = S / 4;
-        const sheets    = [];
+    // Build inner booklet sheets from an array of original page indices.
+    // Pages beyond the array length become blank (-1).
+    function buildInnerSheets(origIndices, S, direction) {
+        const n       = origIndices.length;
+        const padded  = Math.ceil(n / S) * S;
+        const numSig  = padded / S;
+        const shPerSig = S / 4;
+        const sheets  = [];
 
         for (let sig = 0; sig < numSig; sig++) {
-            const base = sig * S; // 0-indexed start page of this signature
-
+            const base = sig * S;
             for (let sh = 0; sh < shPerSig; sh++) {
-                // 0-indexed positions in the padded book
-                const pFL = base + S - 1 - 2 * sh;
-                const pFR = base + 2 * sh;
-                const pBL = base + 2 * sh + 1;
-                const pBR = base + S - 2 - 2 * sh;
-
-                const idx = p => (p < pageCount) ? p : -1;
-                const fl = idx(pFL), fr = idx(pFR);
-                const bl = idx(pBL), br = idx(pBR);
-
+                const pick = pos => pos < n ? origIndices[pos] : -1;
+                const fl = pick(base + S - 1 - 2*sh);
+                const fr = pick(base + 2*sh);
+                const bl = pick(base + 2*sh + 1);
+                const br = pick(base + S - 2 - 2*sh);
                 sheets.push(direction === 'rtl'
                     ? { sigIndex: sig, sheetIndex: sh,
                         front: { left: fr, right: fl },
@@ -49,27 +39,76 @@ const BookletEngine = (() => {
                 );
             }
         }
+        return { sheets, padded, numSig, shPerSig };
+    }
 
-        // Flat list of output PDF pages (alternating front/back per sheet)
+    // Compute which source pages (0-indexed, -1=blank) go on each output sheet.
+    //
+    // separateCover=true (default):
+    //   Sheet 0 = cover: front=[p.N, p.1], back=[blank, blank]
+    //   Remaining sheets = inner booklet of pages 2..N-1
+    //
+    // separateCover=false:
+    //   Standard saddle-stitch: all pages in one booklet
+    function computeLayout(pageCount, opts = {}) {
+        const { signatureSize = 4, direction = 'ltr', separateCover = true } = opts;
+
+        const S = signatureSize === 0
+            ? Math.ceil(Math.max(pageCount, 4) / 4) * 4
+            : signatureSize;
+
+        if (separateCover && pageCount >= 2) {
+            // ── Cover sheet ──────────────────────────────────────
+            // LTR: left=p.N (back cover), right=p.1 (front cover)
+            // RTL: left=p.1 (front cover), right=p.N (back cover)
+            const coverFront = direction === 'rtl'
+                ? { left: 0,              right: pageCount - 1 }
+                : { left: pageCount - 1,  right: 0             };
+
+            const coverSheet = {
+                sigIndex: -1, sheetIndex: -1, isCoverSheet: true,
+                front: coverFront,
+                back:  { left: -1, right: -1 },   // intentionally blank
+            };
+
+            // ── Inner pages: indices 1 .. pageCount-2 ───────────
+            const innerIndices = Array.from({ length: pageCount - 2 }, (_, i) => i + 1);
+
+            if (innerIndices.length === 0) {
+                const sheets = [coverSheet];
+                return toResult(pageCount, 2, 0, 0, direction, sheets);
+            }
+
+            const { sheets: inner, padded, numSig, shPerSig } =
+                buildInnerSheets(innerIndices, S, direction);
+
+            const allSheets = [coverSheet, ...inner];
+            return toResult(pageCount, padded + 2, numSig, shPerSig, direction, allSheets);
+        }
+
+        // ── Standard mode: entire book in one pass ───────────────
+        const { sheets, padded, numSig, shPerSig } =
+            buildInnerSheets(
+                Array.from({ length: pageCount }, (_, i) => i),
+                S, direction
+            );
+        return toResult(pageCount, padded, numSig, shPerSig, direction, sheets);
+    }
+
+    function toResult(pageCount, padded, numSig, shPerSig, direction, sheets) {
         const outputPages = sheets.flatMap(s => [
             { left: s.front.left, right: s.front.right, side: 'front',
-              sigIndex: s.sigIndex, sheetIndex: s.sheetIndex },
+              sigIndex: s.sigIndex, sheetIndex: s.sheetIndex, isCoverSheet: !!s.isCoverSheet },
             { left: s.back.left,  right: s.back.right,  side: 'back',
-              sigIndex: s.sigIndex, sheetIndex: s.sheetIndex },
+              sigIndex: s.sigIndex, sheetIndex: s.sheetIndex, isCoverSheet: !!s.isCoverSheet },
         ]);
-
         return { pageCount, padded, numSignatures: numSig,
                  sheetsPerSignature: shPerSig, sheets, outputPages, direction };
     }
 
-    function getPaperSize(name) {
-        return PAPER_SIZES[name] || PAPER_SIZES.A4;
-    }
-
-    // Creep offset for a sheet at depth `sheetDepth` within a signature of
-    // `sheetsPerSig` sheets, with `creepPerSheet` mm per sheet (converted to pts).
     function creepOffset(sheetDepth, sheetsPerSig, creepPerSheetMm) {
-        const pts = creepPerSheetMm * 2.8346; // mm → pts
+        if (sheetDepth < 0) return 0; // cover sheet has no creep
+        const pts = creepPerSheetMm * 2.8346;
         return (sheetsPerSig - 1 - sheetDepth) * pts;
     }
 

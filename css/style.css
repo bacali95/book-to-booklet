@@ -303,47 +303,95 @@ body {
 
 /* ── Page order grid ───────────────────────────────────────────── */
 .page-order-grid {
-    display: flex; flex-direction: column; gap: .6rem;
-    overflow-y: auto; max-height: calc(100vh - 220px);
+    display: flex; flex-direction: column; gap: 1rem;
+    overflow-y: auto; max-height: calc(100vh - 200px);
     padding-right: .25rem;
 }
 
-.order-sheet-wrapper { display: flex; flex-direction: column; gap: .2rem; }
+.order-sheet-wrapper { display: flex; flex-direction: column; gap: .35rem; }
 
 .order-sig-label {
-    font-size: .72rem; font-weight: 700; color: var(--text-2);
-    text-transform: uppercase; letter-spacing: .06em;
-    padding-left: .25rem;
+    font-size: .72rem; font-weight: 700; color: var(--primary);
+    text-transform: uppercase; letter-spacing: .06em; padding-left: .1rem;
 }
 
-.order-sheet {
-    display: grid; grid-template-columns: 1fr 1fr; gap: .5rem;
+.order-sheet { display: flex; flex-direction: column; gap: .4rem; }
+
+.order-sheet-num {
+    font-size: .72rem; font-weight: 600; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: .05em;
 }
+
+.order-sheet-sides { display: flex; gap: .75rem; }
 
 .order-side {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: var(--radius-sm); padding: .5rem;
-    display: flex; flex-direction: column; gap: .4rem;
+    flex: 1; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: .65rem;
+    display: flex; flex-direction: column; gap: .5rem; min-width: 0;
 }
+
 .order-side-label {
     font-size: .7rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .05em; color: var(--text-2); margin-bottom: .2rem;
+    letter-spacing: .05em; color: var(--text-2); text-align: center;
+}
+
+.order-side-pages {
+    display: flex; gap: .6rem; justify-content: center; align-items: flex-start;
 }
 
 .order-page {
-    display: flex; align-items: center; gap: .4rem;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 4px; padding: .3rem .5rem; flex: 1;
-    min-height: 34px;
+    display: flex; flex-direction: column; align-items: center; gap: .35rem;
+    border-radius: 4px; padding: .25rem; min-width: 0;
 }
-.order-page-blank { background: var(--blank-bg); opacity: .6; }
+
+.order-page-blank { opacity: .7; }
+
 .order-thumb {
-    border-radius: 2px; border: 1px solid var(--border);
-    image-rendering: pixelated; height: 28px; width: auto;
-    flex-shrink: 0;
+    height: 220px; width: auto; max-width: 180px;
+    border: 1px solid var(--border); border-radius: 3px;
+    box-shadow: var(--shadow); display: block;
+    image-rendering: auto;
 }
-.order-page-num   { font-weight: 700; font-size: .85rem; }
-.order-page-label { font-size: .72rem; color: var(--text-2); margin-left: auto; }
+
+.thumb-cover     { outline: 2px solid var(--primary); outline-offset: 1px; }
+.thumb-back-cover{ outline: 2px solid var(--text-2);  outline-offset: 1px; }
+
+.order-blank-rect {
+    height: 220px; width: 156px; /* A4 ratio ~1:√2 */
+    background: #fff; border: 1px dashed var(--border);
+    border-radius: 3px;
+}
+[data-theme="dark"] .order-blank-rect { background: #2d2d2d; }
+
+.order-page-meta {
+    display: flex; flex-direction: column; align-items: center; gap: .2rem;
+}
+
+.order-page-num { font-size: .78rem; font-weight: 600; color: var(--text); }
+.blank-num      { color: var(--text-2); font-style: italic; font-weight: 400; }
+
+.cover-badge {
+    font-size: .62rem; font-weight: 700; padding: .1rem .4rem;
+    border-radius: 99px; text-transform: uppercase; letter-spacing: .05em;
+    white-space: nowrap;
+}
+.badge-cover { background: var(--primary); color: #fff; }
+.badge-back  { background: var(--text-2);  color: #fff; }
+
+.is-cover-sheet { border-left: 3px solid var(--primary); padding-left: .5rem; }
+
+.cover-sheet-label {
+    color: var(--primary) !important;
+    font-size: .75rem !important;
+}
+
+.is-cover-sheet .order-side:last-child {
+    opacity: .45;
+    background: repeating-linear-gradient(
+        135deg, var(--surface2), var(--surface2) 4px,
+        var(--border) 4px, var(--border) 5px
+    );
+}
 
 /* ── Sheet layout table ────────────────────────────────────────── */
 .layout-header {
@@ -404,6 +452,6 @@ body {
 }
 
 @media (max-width: 480px) {
-    .order-sheet { grid-template-columns: 1fr; }
+    .order-sheet-sides { flex-direction: column; }
     .layout-header { flex-direction: column; gap: .4rem; }
 }

@@ -39,6 +39,7 @@
         return {
             signatureSize:    sigRaw,
             direction:        getToggleValue('directionToggle'),
+            separateCover:    checked('separateCover'),
             paperSize:        setting('outputPaperSize') || 'A4',
             scaling:          setting('pageScaling') || 'fit',
             customScale:      parseFloat(setting('customScale') || '1'),
@@ -192,7 +193,7 @@
         });
     });
 
-    ['cropMarks','blankPageMark','centerLine'].forEach(id =>
+    ['cropMarks','blankPageMark','centerLine','separateCover'].forEach(id =>
         $(id)?.addEventListener('change', onSettingsChange));
 
     $('pageScaling').addEventListener('change', () => {
@@ -207,6 +208,7 @@
             state.layout = BookletEngine.computeLayout(state.pageCount, {
                 signatureSize: opts.signatureSize,
                 direction:     opts.direction,
+                separateCover: opts.separateCover,
             });
             renderPreview(state.layout, state.pageCount, opts.direction);
             generateBtn.disabled = false;
@@ -230,72 +232,119 @@
     function renderPageOrderGrid(layout, pageCount) {
         pageOrderGrid.innerHTML = '';
 
-        // Create a map: source page idx → [list of positions]
-        const pagePos = {};
-        layout.sheets.forEach((sheet, si) => {
-            [['front','left'], ['front','right'], ['back','left'], ['back','right']].forEach(([side,pos]) => {
-                const idx = sheet[side][pos];
-                if (idx >= 0) {
-                    if (!pagePos[idx]) pagePos[idx] = [];
-                    pagePos[idx].push({ sheet: si, side, pos });
-                }
-            });
-        });
+        const THUMB_H  = 220;
+        const lastPage = pageCount - 1;
 
-        // Show all output sheets
-        layout.sheets.forEach((sheet, si) => {
-            const sigEl = document.createElement('div');
-            sigEl.className = 'order-sig-label';
-            if (si === 0 || sheet.sigIndex !== layout.sheets[si - 1]?.sigIndex) {
-                sigEl.textContent = layout.numSignatures > 1
-                    ? `Signature ${sheet.sigIndex + 1}` : '';
+        const makeHalf = (idx) => {
+            const isBlank     = idx < 0;
+            const isCover     = idx === 0;
+            const isBackCover = idx === lastPage;
+
+            const div = document.createElement('div');
+            div.className = 'order-page' + (isBlank ? ' order-page-blank' : '');
+            div.title = isBlank ? 'Blank padding page' : `Page ${idx + 1}`;
+
+            // Thumbnail or blank rect
+            if (!isBlank) {
+                const src = state.sourcePages[idx];
+                if (src) {
+                    const c      = src.canvas || src;
+                    const srcH   = src.naturalH || c.height;
+                    const srcW   = src.naturalW || c.width;
+                    const scale  = THUMB_H / srcH;
+                    const thumb  = document.createElement('canvas');
+                    thumb.width  = Math.round(srcW * scale);
+                    thumb.height = Math.round(srcH * scale);
+                    thumb.getContext('2d').drawImage(c, 0, 0, thumb.width, thumb.height);
+                    thumb.className = 'order-thumb';
+                    if (isCover)     thumb.classList.add('thumb-cover');
+                    if (isBackCover) thumb.classList.add('thumb-back-cover');
+                    div.appendChild(thumb);
+                }
+            } else {
+                const rect = document.createElement('div');
+                rect.className = 'order-blank-rect';
+                div.appendChild(rect);
             }
 
-            const sheetEl = document.createElement('div');
-            sheetEl.className = 'order-sheet';
+            // Label row
+            const meta = document.createElement('div');
+            meta.className = 'order-page-meta';
+            if (isBlank) {
+                meta.innerHTML = '<span class="order-page-num blank-num">blank</span>';
+            } else {
+                meta.innerHTML = `<span class="order-page-num">p.${idx + 1}</span>`;
+                if (isCover)
+                    meta.innerHTML += '<span class="cover-badge badge-cover">Cover</span>';
+                else if (isBackCover)
+                    meta.innerHTML += '<span class="cover-badge badge-back">Back</span>';
+            }
+            div.appendChild(meta);
+            return div;
+        };
 
-            const makeHalf = (idx, label) => {
-                const div = document.createElement('div');
-                div.className = 'order-page' + (idx < 0 ? ' order-page-blank' : '');
-                div.innerHTML = `<span class="order-page-num">${idx >= 0 ? idx + 1 : '—'}</span>
-                                 <span class="order-page-label">${label}</span>`;
-                if (idx >= 0) {
-                    div.title = `Source page ${idx + 1}`;
-                    // Thumbnail from source
-                    const src = state.sourcePages[idx];
-                    if (src) {
-                        const c = src.canvas || src;
-                        const thumb = document.createElement('canvas');
-                        const scale = 48 / (src.naturalH || c.height);
-                        thumb.width  = (src.naturalW || c.width) * scale;
-                        thumb.height = (src.naturalH || c.height) * scale;
-                        thumb.getContext('2d').drawImage(c, 0, 0, thumb.width, thumb.height);
-                        thumb.className = 'order-thumb';
-                        div.prepend(thumb);
-                    }
-                }
-                return div;
-            };
+        const makeSide = (label, leftIdx, rightIdx) => {
+            const side = document.createElement('div');
+            side.className = 'order-side';
 
-            const front = document.createElement('div');
-            front.className = 'order-side';
-            front.innerHTML = '<div class="order-side-label">Front</div>';
-            front.appendChild(makeHalf(sheet.front.left, direction === 'rtl' ? 'Left' : 'Left'));
-            front.appendChild(makeHalf(sheet.front.right, 'Right'));
+            const lbl = document.createElement('div');
+            lbl.className = 'order-side-label';
+            lbl.textContent = label;
+            side.appendChild(lbl);
 
-            const back = document.createElement('div');
-            back.className = 'order-side';
-            back.innerHTML = '<div class="order-side-label">Back</div>';
-            back.appendChild(makeHalf(sheet.back.left, 'Left'));
-            back.appendChild(makeHalf(sheet.back.right, 'Right'));
+            const pages = document.createElement('div');
+            pages.className = 'order-side-pages';
+            // Engine already places pages at correct physical positions for both LTR and RTL
+            pages.appendChild(makeHalf(leftIdx));
+            pages.appendChild(makeHalf(rightIdx));
+            side.appendChild(pages);
+            return side;
+        };
 
-            sheetEl.appendChild(front);
-            sheetEl.appendChild(back);
-
+        layout.sheets.forEach((sheet, si) => {
             const wrapper = document.createElement('div');
-            wrapper.className = 'order-sheet-wrapper';
-            if (sigEl.textContent) wrapper.appendChild(sigEl);
-            wrapper.appendChild(sheetEl);
+            wrapper.className = 'order-sheet-wrapper' + (sheet.isCoverSheet ? ' is-cover-sheet' : '');
+
+            // Section header
+            if (sheet.isCoverSheet) {
+                const lbl = document.createElement('div');
+                lbl.className = 'order-sig-label cover-sheet-label';
+                lbl.textContent = '★ Cover Sheet — print front only, back is blank';
+                wrapper.appendChild(lbl);
+            } else if (layout.numSignatures > 1 &&
+                (si === 0 || sheet.sigIndex !== layout.sheets[si - 1]?.sigIndex ||
+                 layout.sheets[si - 1]?.isCoverSheet)) {
+                const sigLbl = document.createElement('div');
+                sigLbl.className = 'order-sig-label';
+                sigLbl.textContent = layout.numSignatures > 1
+                    ? `Inner booklet — Signature ${sheet.sigIndex + 1}`
+                    : 'Inner booklet';
+                wrapper.appendChild(sigLbl);
+            } else if (si === 1 && layout.sheets[0]?.isCoverSheet) {
+                const sigLbl = document.createElement('div');
+                sigLbl.className = 'order-sig-label';
+                sigLbl.textContent = 'Inner booklet';
+                wrapper.appendChild(sigLbl);
+            }
+
+            const sheetRow = document.createElement('div');
+            sheetRow.className = 'order-sheet';
+
+            const sheetNum = document.createElement('div');
+            sheetNum.className = 'order-sheet-num';
+            sheetNum.textContent = sheet.isCoverSheet ? 'Cover Sheet' : `Sheet ${si}`;
+            sheetRow.appendChild(sheetNum);
+
+            const sides = document.createElement('div');
+            sides.className = 'order-sheet-sides';
+
+            const frontLabel = sheet.isCoverSheet ? 'Front (print this side only)' : 'Front — side 1';
+            const backLabel  = sheet.isCoverSheet ? 'Back (leave blank)' : 'Back — side 2';
+            sides.appendChild(makeSide(frontLabel, sheet.front.left, sheet.front.right));
+            sides.appendChild(makeSide(backLabel,  sheet.back.left,  sheet.back.right));
+            sheetRow.appendChild(sides);
+
+            wrapper.appendChild(sheetRow);
             pageOrderGrid.appendChild(wrapper);
         });
     }
