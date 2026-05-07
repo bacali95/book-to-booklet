@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import type { Direction } from "@/lib/engine";
 import type { SourcePage } from "@/lib/renderer";
 
 interface Spread {
-  left: number; // source page index, -1 = blank
+  left: number;
   right: number;
   isCover?: boolean;
   isBack?: boolean;
@@ -15,53 +14,57 @@ function buildSpreads(pageCount: number, direction: Direction): Spread[] {
   const s: Spread[] = [];
   s.push({ left: -1, right: 0, isCover: true });
   for (let i = 1; i <= pageCount - 2; i += 2) {
-    const a = i;
-    const b = i + 1 <= pageCount - 2 ? i + 1 : -1;
+    const a = i,
+      b = i + 1 <= pageCount - 2 ? i + 1 : -1;
     s.push(direction === "rtl" ? { left: b, right: a } : { left: a, right: b });
   }
   if (pageCount > 1) s.push({ left: pageCount - 1, right: -1, isBack: true });
   return s;
 }
 
-interface HalfProps {
+function BookHalf({
+  pageIdx,
+  sourcePages,
+  width,
+  height,
+}: {
   pageIdx: number;
   sourcePages: SourcePage[];
   width: number;
   height: number;
-  isDark: boolean;
-}
-
-function BookHalf({ pageIdx, sourcePages, width, height, isDark }: HalfProps) {
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDark = document.documentElement.dataset.theme === "dark";
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const SCALE = 2;
-    canvas.width = width * SCALE;
-    canvas.height = height * SCALE;
+    const S = 2;
+    canvas.width = width * S;
+    canvas.height = height * S;
     const ctx = canvas.getContext("2d")!;
-
     if (pageIdx < 0) {
-      ctx.fillStyle = isDark ? "#1c1c1e" : "#f0f0f0";
+      ctx.fillStyle = isDark ? "#1c1a17" : "#f0ede8";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       return;
     }
-
-    ctx.fillStyle = isDark ? "#2a2a2c" : "#ffffff";
+    ctx.fillStyle = isDark ? "#2a2720" : "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
     const src = sourcePages[pageIdx];
     if (src) {
-      const srcC = src.canvas;
-      const srcW = src.naturalW || srcC.width;
-      const srcH = src.naturalH || srcC.height;
-      const sc = Math.min((width * SCALE) / srcW, (height * SCALE) / srcH);
-      const dw = srcW * sc;
-      const dh = srcH * sc;
-      const dx = (width * SCALE - dw) / 2;
-      const dy = (height * SCALE - dh) / 2;
-      ctx.drawImage(srcC, dx, dy, dw, dh);
+      const sc = Math.min(
+        (width * S) / src.naturalW,
+        (height * S) / src.naturalH,
+      );
+      const dw = src.naturalW * sc,
+        dh = src.naturalH * sc;
+      ctx.drawImage(
+        src.canvas,
+        (width * S - dw) / 2,
+        (height * S - dh) / 2,
+        dw,
+        dh,
+      );
     }
   }, [pageIdx, sourcePages, width, height, isDark]);
 
@@ -77,19 +80,13 @@ interface Props {
 export function BookViewTab({ pageCount, direction, sourcePages }: Props) {
   const spreads = buildSpreads(pageCount, direction);
   const [idx, setIdx] = useState(0);
-  const isDark = document.documentElement.classList.contains("dark");
+  useEffect(() => setIdx(0), [pageCount, direction]);
 
-  // Reset to first spread when content changes
-  useEffect(() => {
-    setIdx(0);
-  }, [pageCount, direction]);
-
-  // Compute page half size from first source page aspect ratio
   const src = sourcePages[0];
   const aspect = src
     ? (src.naturalW || src.canvas.width) / (src.naturalH || src.canvas.height)
     : 1 / Math.SQRT2;
-  const H = Math.min(420, Math.max(280, window.innerHeight - 380));
+  const H = Math.min(300, Math.max(220, window.innerHeight - 420));
   const W = Math.round(H * aspect);
 
   const spread = spreads[idx];
@@ -98,8 +95,6 @@ export function BookViewTab({ pageCount, direction, sourcePages }: Props) {
     () => setIdx((i) => Math.min(spreads.length - 1, i + 1)),
     [spreads.length],
   );
-  const first = useCallback(() => setIdx(0), []);
-  const last = useCallback(() => setIdx(spreads.length - 1), [spreads.length]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -111,10 +106,6 @@ export function BookViewTab({ pageCount, direction, sourcePages }: Props) {
         e.preventDefault();
         direction === "rtl" ? prev() : next();
       }
-      if (e.key === " ") {
-        e.preventDefault();
-        next();
-      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -122,129 +113,110 @@ export function BookViewTab({ pageCount, direction, sourcePages }: Props) {
 
   if (!spread) return null;
 
-  const dirLabel =
-    direction === "rtl"
-      ? "→ Right-to-Left (RTL) · spine on right"
-      : "← Left-to-Right (LTR) · spine on left";
-
-  const spreadLabel = spread.isCover
-    ? "Front Cover"
+  const pct = spreads.length > 1 ? (idx / (spreads.length - 1)) * 100 : 0;
+  const label = spread.isCover
+    ? "Cover"
     : spread.isBack
-      ? "Back Cover"
-      : direction === "rtl"
-        ? `p.${spread.right >= 0 ? spread.right + 1 : "—"} & p.${spread.left >= 0 ? spread.left + 1 : "—"}`
-        : `p.${spread.left >= 0 ? spread.left + 1 : "—"} & p.${spread.right >= 0 ? spread.right + 1 : "—"}`;
+      ? "Back cover"
+      : `Spread ${idx} / ${spreads.length - 2}`;
+
+  const ArrowLeft = () => (
+    <svg
+      width={15}
+      height={15}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M19 12H5M12 19l-7-7 7-7" />
+    </svg>
+  );
+  const ArrowRight = () => (
+    <svg
+      width={15}
+      height={15}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M5 12h14M12 5l7 7-7 7" />
+    </svg>
+  );
+
+  const btnCls =
+    "w-8 h-8 rounded-lg border border-line bg-e2 text-fg2 flex items-center justify-center cursor-pointer hover:bg-e3 disabled:opacity-30 disabled:cursor-not-allowed transition-all";
 
   return (
-    <div className="flex flex-col items-center gap-4 py-2">
-      <span className="text-xs px-2 py-1 rounded-full bg-muted text-muted-foreground font-medium">
-        {dirLabel}
-      </span>
-
-      {/* Book spread */}
-      <div
-        className="flex items-stretch"
-        style={{
-          boxShadow:
-            "0 2px 4px rgba(0,0,0,.12), 0 6px 18px rgba(0,0,0,.22), 0 20px 50px rgba(0,0,0,.18)",
-          transform: "rotateX(3deg)",
-          transformOrigin: "bottom center",
-          transition: "transform .3s ease",
-        }}
-      >
-        {/* Left half */}
-        <div
-          className="relative cursor-pointer"
-          style={{ boxShadow: "inset -8px 0 20px -6px rgba(0,0,0,.22)" }}
-          onClick={direction === "rtl" ? next : prev}
-        >
-          <BookHalf
-            pageIdx={spread.left}
-            sourcePages={sourcePages}
-            width={W}
-            height={H}
-            isDark={isDark}
-          />
-          {spread.left >= 0 && (
-            <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground">
-              p.{spread.left + 1}
-            </span>
-          )}
-        </div>
-
-        {/* Spine */}
-        <div
-          className="w-2.5 shrink-0"
-          style={{
-            background:
-              "linear-gradient(to right, #a0a0a0 0%, #d8d8d8 35%, #e8e8e8 50%, #c8c8c8 70%, #909090 100%)",
-            height: H,
-          }}
-        />
-
-        {/* Right half */}
-        <div
-          className="relative cursor-pointer"
-          style={{ boxShadow: "inset 8px 0 20px -6px rgba(0,0,0,.22)" }}
-          onClick={direction === "rtl" ? prev : next}
-        >
-          <BookHalf
-            pageIdx={spread.right}
-            sourcePages={sourcePages}
-            width={W}
-            height={H}
-            isDark={isDark}
-          />
-          {spread.right >= 0 && (
-            <span className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground">
-              p.{spread.right + 1}
-            </span>
-          )}
+    <div className="flex flex-col items-center gap-6">
+      <div className="flex items-center justify-center">
+        <div className="flex items-stretch shadow-xl rounded overflow-hidden">
+          <div className="relative bg-paper" style={{ width: W, height: H }}>
+            <BookHalf
+              pageIdx={spread.left}
+              sourcePages={sourcePages}
+              width={W}
+              height={H}
+            />
+            {spread.left >= 0 && (
+              <div className="absolute bottom-1.5 left-2 text-[9px] font-mono text-paper-fg/50">
+                {spread.left + 1}
+              </div>
+            )}
+          </div>
+          <div className="w-[2px] self-stretch bg-line/50" />
+          <div className="relative bg-paper" style={{ width: W, height: H }}>
+            <BookHalf
+              pageIdx={spread.right}
+              sourcePages={sourcePages}
+              width={W}
+              height={H}
+            />
+            {spread.right >= 0 && (
+              <div className="absolute bottom-1.5 right-2 text-[9px] font-mono text-paper-fg/50">
+                {spread.right + 1}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Navigation */}
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={first}
+      <div className="flex items-center gap-4 w-full max-w-xs">
+        <button
+          className={btnCls}
           disabled={idx === 0}
-          title="First spread"
-        >
-          ⏮
-        </Button>
-        <Button
-          variant="outline"
           onClick={direction === "rtl" ? next : prev}
-          disabled={idx === 0}
         >
-          ← Prev
-        </Button>
-        <span className="text-sm text-muted-foreground min-w-[160px] text-center">
-          {idx + 1} / {spreads.length} — {spreadLabel}
+          <ArrowLeft />
+        </button>
+        <div className="flex-1 flex flex-col items-center gap-1.5">
+          <div className="w-full h-1 bg-e3 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-accent rounded-full transition-[width] duration-200"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <div className="text-[11px] font-mono text-fg3">{label}</div>
+        </div>
+        <button
+          className={btnCls}
+          disabled={idx === spreads.length - 1}
+          onClick={direction === "rtl" ? prev : next}
+        >
+          <ArrowRight />
+        </button>
+      </div>
+
+      <div>
+        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-e2 border border-line text-[11px] font-mono text-fg3">
+          {direction === "rtl" ? "RTL → spine on right" : "LTR ← spine on left"}
         </span>
-        <Button
-          variant="outline"
-          onClick={direction === "rtl" ? prev : next}
-          disabled={idx === spreads.length - 1}
-        >
-          Next →
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={last}
-          disabled={idx === spreads.length - 1}
-          title="Last spread"
-        >
-          ⏭
-        </Button>
       </div>
-
-      <p className="text-xs text-muted-foreground">
-        Use ← → arrow keys or click to navigate
-      </p>
     </div>
   );
 }

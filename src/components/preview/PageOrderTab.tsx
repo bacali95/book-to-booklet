@@ -1,6 +1,4 @@
 import { useMemo } from "react";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 import type { BookletLayout } from "@/lib/engine";
 import type { SourcePage } from "@/lib/renderer";
 
@@ -10,7 +8,7 @@ interface Props {
   pageCount: number;
 }
 
-const THUMB_H = 200;
+const THUMB_H = 110;
 
 function PageThumb({
   idx,
@@ -23,10 +21,10 @@ function PageThumb({
 }) {
   const isBlank = idx < 0;
   const isCover = idx === 0;
-  const isBackCover = idx === pageCount - 1;
+  const isBack = idx === pageCount - 1 && pageCount > 1;
   const src = isBlank ? null : sourcePages[idx];
 
-  const thumbCanvas = useMemo(() => {
+  const imgSrc = useMemo(() => {
     if (!src) return null;
     const c = src.canvas;
     const srcH = src.naturalH || c.height;
@@ -36,145 +34,207 @@ function PageThumb({
     el.width = Math.round(srcW * s);
     el.height = Math.round(srcH * s);
     el.getContext("2d")!.drawImage(c, 0, 0, el.width, el.height);
-    return el;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idx]);
+    return el.toDataURL();
+  }, [src]);
+
+  const thumbW = Math.round(THUMB_H * 0.707);
 
   return (
-    <div
-      className={cn(
-        "flex flex-col items-center gap-1",
-        isBlank && "opacity-50",
-      )}
-    >
-      {thumbCanvas ? (
-        <img
-          src={thumbCanvas.toDataURL()}
-          alt={`Page ${idx + 1}`}
-          className={cn(
-            "border border-border rounded shadow-sm object-contain",
-            isCover && "ring-2 ring-blue-500",
-            isBackCover && "ring-2 ring-purple-500",
-          )}
-          style={{ height: THUMB_H }}
-        />
-      ) : (
-        <div
-          className="border-2 border-dashed border-border rounded bg-muted/30 flex items-center justify-center"
-          style={{ width: Math.round(THUMB_H * 0.707), height: THUMB_H }}
-        >
-          <span className="text-xs text-muted-foreground">blank</span>
-        </div>
-      )}
-      <div className="flex items-center gap-1">
-        {isBlank ? (
-          <span className="text-xs text-muted-foreground">blank</span>
+    <div className="flex flex-col items-center">
+      <div
+        className={`relative overflow-hidden rounded border ${isBlank ? "border-dashed border-line bg-e2" : "border-line bg-paper shadow-sm"}`}
+        style={{ width: imgSrc ? undefined : thumbW, height: THUMB_H }}
+      >
+        {imgSrc ? (
+          <img
+            src={imgSrc}
+            alt={`p.${idx + 1}`}
+            className="block"
+            style={{ width: "auto", height: THUMB_H }}
+          />
+        ) : isBlank ? (
+          <div className="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-fg3">
+            blank
+          </div>
         ) : (
-          <span className="text-xs font-medium">p.{idx + 1}</span>
+          <>
+            <div className="p-2 pt-3 flex flex-col gap-1">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-[3px] bg-fg3/20 rounded-full"
+                  style={{ width: `${48 + Math.sin(idx + i) * 26}%` }}
+                />
+              ))}
+            </div>
+            <div className="absolute bottom-1 right-1 text-[9px] font-mono bg-e3/80 text-fg2 px-1 rounded">
+              {idx + 1}
+            </div>
+          </>
+        )}
+        {!isBlank && imgSrc && (
+          <div className="absolute bottom-1 right-1 text-[9px] font-mono bg-black/30 text-white px-1 rounded">
+            {idx + 1}
+          </div>
         )}
         {isCover && (
-          <Badge
-            variant="secondary"
-            className="text-[10px] px-1 py-0 bg-blue-100 text-blue-700"
-          >
-            Cover
-          </Badge>
+          <div className="absolute top-1 left-1 text-[9px] font-semibold bg-accent text-accent-fg px-1 rounded leading-4">
+            cover
+          </div>
         )}
-        {isBackCover && (
-          <Badge
-            variant="secondary"
-            className="text-[10px] px-1 py-0 bg-purple-100 text-purple-700"
-          >
-            Back
-          </Badge>
+        {isBack && (
+          <div className="absolute top-1 left-1 text-[9px] font-semibold bg-fg3/60 text-white px-1 rounded leading-4">
+            back
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-export function PageOrderTab({ layout, sourcePages, pageCount }: Props) {
+function SheetCard({
+  sheet,
+  sourcePages,
+  pageCount,
+  isCover,
+}: {
+  sheet: BookletLayout["sheets"][number];
+  sourcePages: SourcePage[];
+  pageCount: number;
+  isCover: boolean;
+}) {
+  const sheetNum = sheet.sheetIndex >= 0 ? sheet.sheetIndex + 1 : undefined;
+  const fmt = (n: number) => (n >= 0 ? `p.${n + 1}` : "blank");
+
   return (
-    <div className="space-y-6 pb-4">
-      {layout.sheets.map((sheet, si) => {
-        const prevSheet = si > 0 ? layout.sheets[si - 1] : null;
-        const showSigLabel =
-          !sheet.isCoverSheet &&
-          (prevSheet?.isCoverSheet ||
-            si === 0 ||
-            (prevSheet && prevSheet.sigIndex !== sheet.sigIndex));
-
-        return (
+    <div
+      className="rounded-[14px] overflow-hidden border"
+      style={
+        isCover
+          ? {
+              background: "color-mix(in oklch, var(--accent) 6%, var(--bg-e1))",
+              borderColor:
+                "color-mix(in oklch, var(--accent) 30%, transparent)",
+            }
+          : { background: "var(--bg-e1)", borderColor: "var(--line)" }
+      }
+    >
+      <div
+        className="px-4 py-3 border-b"
+        style={{
+          borderColor: isCover
+            ? "color-mix(in oklch, var(--accent) 20%, transparent)"
+            : "var(--line)",
+        }}
+      >
+        <div className="flex items-center gap-2 text-[13px] font-semibold text-fg">
+          {isCover ? "Cover sheet" : `Sheet ${sheetNum}`}
+          {isCover && (
+            <span
+              className="text-[11px] font-mono font-normal px-1.5 py-0.5 rounded"
+              style={{
+                background:
+                  "color-mix(in oklch, var(--accent) 15%, transparent)",
+                color: "var(--accent)",
+              }}
+            >
+              prints front only
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="divide-y divide-line">
+        {[
+          { label: "Front", side: sheet.front, isFront: true },
+          { label: "Back", side: sheet.back, isFront: false },
+        ].map(({ label, side, isFront }) => (
           <div
-            key={si}
-            className={cn(
-              "space-y-3",
-              sheet.isCoverSheet && "ring-1 ring-amber-300 rounded-lg p-3",
-            )}
+            key={label}
+            className="px-4 py-3 flex flex-col gap-2"
+            style={isCover && !isFront ? { opacity: 0.35 } : undefined}
           >
-            {sheet.isCoverSheet && (
-              <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-                ★ Cover Sheet — print front only, back is blank
-              </p>
-            )}
-            {showSigLabel && (
-              <p className="text-xs font-semibold text-muted-foreground">
-                {layout.numSignatures > 1
-                  ? `Inner booklet — Signature ${sheet.sigIndex + 1}`
-                  : "Inner booklet"}
-              </p>
-            )}
-
-            <div className="rounded-lg border border-border overflow-hidden">
-              <div className="px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground">
-                {sheet.isCoverSheet ? "Cover Sheet" : `Sheet ${si + 1}`}
-              </div>
-              <div className="divide-y divide-border">
-                {[
-                  {
-                    label: sheet.isCoverSheet
-                      ? "Front (print this side only)"
-                      : "Front — side 1",
-                    side: sheet.front,
-                  },
-                  {
-                    label: sheet.isCoverSheet
-                      ? "Back (leave blank)"
-                      : "Back — side 2",
-                    side: sheet.back,
-                  },
-                ].map(({ label, side }) => (
-                  <div
-                    key={label}
-                    className={cn(
-                      "p-3",
-                      sheet.isCoverSheet &&
-                        label.includes("Back") &&
-                        "opacity-40 bg-muted/20",
-                    )}
-                  >
-                    <p className="text-xs text-muted-foreground mb-3">
-                      {label}
-                    </p>
-                    <div className="flex gap-4 justify-center">
-                      <PageThumb
-                        idx={side.left}
-                        sourcePages={sourcePages}
-                        pageCount={pageCount}
-                      />
-                      <PageThumb
-                        idx={side.right}
-                        sourcePages={sourcePages}
-                        pageCount={pageCount}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="flex items-center gap-1.5 text-[12px] text-fg2 font-medium">
+              <span
+                className={`w-2 h-2 rounded-full ${isFront ? "bg-accent" : "bg-fg3"}`}
+              />
+              {label}
+              <span className="ml-auto text-[11px] font-mono text-fg3">
+                side {isFront ? 1 : 2}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <PageThumb
+                idx={side.left}
+                sourcePages={sourcePages}
+                pageCount={pageCount}
+              />
+              <div className="w-px self-stretch bg-line-soft" />
+              <PageThumb
+                idx={side.right}
+                sourcePages={sourcePages}
+                pageCount={pageCount}
+              />
+            </div>
+            <div className="flex justify-between text-[11px] font-mono text-fg3 px-1">
+              <span>{fmt(side.left)}</span>
+              <span>{fmt(side.right)}</span>
             </div>
           </div>
-        );
-      })}
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function PageOrderTab({ layout, sourcePages, pageCount }: Props) {
+  const coverSheet = layout.sheets.find((s) => s.isCoverSheet);
+  const innerSheets = layout.sheets.filter((s) => !s.isCoverSheet);
+
+  return (
+    <div className="flex flex-col gap-6">
+      {coverSheet && (
+        <div
+          className="flex flex-col gap-3 p-4 rounded-[14px] border"
+          style={{
+            background: "color-mix(in oklch, var(--accent) 5%, var(--bg-e1))",
+            borderColor: "color-mix(in oklch, var(--accent) 30%, transparent)",
+          }}
+        >
+          <div className="flex items-center gap-1.5 text-[12px] font-medium text-fg2">
+            <span className="text-accent">★</span>
+            <strong className="text-fg font-semibold">Cover sheet</strong>
+            <span>— print front only, back stays blank</span>
+          </div>
+          <SheetCard
+            sheet={coverSheet}
+            sourcePages={sourcePages}
+            pageCount={pageCount}
+            isCover
+          />
+        </div>
+      )}
+
+      {innerSheets.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between text-[13px] font-semibold text-fg">
+            <span>Inner booklet</span>
+            <span className="text-[12px] font-normal font-mono text-fg3">
+              {innerSheets.length}{" "}
+              {innerSheets.length === 1 ? "sheet" : "sheets"} · print
+              double-sided
+            </span>
+          </div>
+          {innerSheets.map((sheet, i) => (
+            <SheetCard
+              key={i}
+              sheet={sheet}
+              sourcePages={sourcePages}
+              pageCount={pageCount}
+              isCover={false}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

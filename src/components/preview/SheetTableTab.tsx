@@ -1,5 +1,4 @@
 import type { BookletLayout } from "@/lib/engine";
-import { cn } from "@/lib/utils";
 
 interface Props {
   layout: BookletLayout;
@@ -10,98 +9,89 @@ export function SheetTableTab({ layout }: Props) {
     idx >= 0 ? (
       <span>{`p.${idx + 1}`}</span>
     ) : (
-      <span className="text-muted-foreground italic">blank</span>
+      <em className="not-italic text-fg3">blank</em>
     );
 
-  return (
-    <div className="space-y-4 pb-4">
-      <div className="grid grid-cols-3 gap-2 text-sm">
-        {[
-          ["Total pages", layout.pageCount],
-          ["Padded to", layout.padded],
-          ["Signatures", layout.numSignatures],
-          ["Sheets/sig", layout.sheetsPerSignature],
-          ["Output pages", layout.outputPages.length],
-          ["Direction", layout.direction.toUpperCase()],
-        ].map(([label, value]) => (
-          <div
-            key={label as string}
-            className="flex flex-col gap-0.5 rounded-md border border-border px-3 py-2"
-          >
-            <span className="text-xs text-muted-foreground">{label}</span>
-            <span className="font-semibold">{value as string}</span>
-          </div>
-        ))}
-      </div>
+  const rows: {
+    sheet: string;
+    side: "front" | "back";
+    left: number;
+    right: number;
+    note?: string;
+    isCover: boolean;
+  }[] = [];
+  for (const sheet of layout.sheets) {
+    const label = sheet.isCoverSheet
+      ? "Cover"
+      : `Sheet ${sheet.sheetIndex + 1}`;
+    rows.push({
+      sheet: label,
+      side: "front",
+      left: sheet.front.left,
+      right: sheet.front.right,
+      note: sheet.isCoverSheet ? "print only" : undefined,
+      isCover: !!sheet.isCoverSheet,
+    });
+    rows.push({
+      sheet: label,
+      side: "back",
+      left: sheet.back.left,
+      right: sheet.back.right,
+      note: sheet.isCoverSheet ? "leave blank" : undefined,
+      isCover: !!sheet.isCoverSheet,
+    });
+  }
 
-      <div className="rounded-md border border-border overflow-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-border bg-muted/50">
-              <th className="px-3 py-2 text-left font-semibold" rowSpan={2}>
-                Sheet
-              </th>
-              <th className="px-3 py-2 text-left font-semibold" rowSpan={2}>
-                Sig
-              </th>
-              <th
-                className="px-3 py-2 text-center font-semibold border-l border-border"
-                colSpan={2}
-              >
-                Front (side 1)
-              </th>
-              <th
-                className="px-3 py-2 text-center font-semibold border-l border-border"
-                colSpan={2}
-              >
-                Back (side 2)
-              </th>
+  const thCls =
+    "text-left py-2 px-3 text-[11px] font-semibold text-fg3 uppercase tracking-wide border-b border-line whitespace-nowrap";
+  const tdCls = "py-2 px-3 border-b border-line-soft";
+
+  return (
+    <div className="w-full overflow-x-auto">
+      <table className="w-full border-collapse text-[13px]">
+        <thead>
+          <tr>
+            <th className={thCls}>Sheet</th>
+            <th className={thCls}>Side</th>
+            <th className={thCls}>Left page</th>
+            <th className={thCls}>Right page</th>
+            <th className={thCls}></th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr
+              key={i}
+              style={
+                r.isCover
+                  ? {
+                      background:
+                        "color-mix(in oklch, var(--accent) 5%, transparent)",
+                    }
+                  : undefined
+              }
+            >
+              <td className={`${tdCls} font-semibold text-fg`}>{r.sheet}</td>
+              <td className={tdCls}>
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${
+                    r.side === "front"
+                      ? "bg-accent/15 text-accent"
+                      : "bg-fg3/15 text-fg2"
+                  }`}
+                >
+                  {r.side.charAt(0).toUpperCase() + r.side.slice(1)}
+                </span>
+              </td>
+              <td className={`${tdCls} font-mono text-fg2`}>{fmt(r.left)}</td>
+              <td className={`${tdCls} font-mono text-fg2`}>{fmt(r.right)}</td>
+              <td className={`${tdCls} text-[11px] font-mono text-fg3 italic`}>
+                {r.note ?? ""}
+              </td>
             </tr>
-            <tr className="border-b border-border bg-muted/30">
-              <th className="px-3 py-1.5 text-left border-l border-border">
-                Left
-              </th>
-              <th className="px-3 py-1.5 text-left">Right</th>
-              <th className="px-3 py-1.5 text-left border-l border-border">
-                Left
-              </th>
-              <th className="px-3 py-1.5 text-left">Right</th>
-            </tr>
-          </thead>
-          <tbody>
-            {layout.sheets.map((sheet, i) => (
-              <tr
-                key={i}
-                className={cn(
-                  "border-b border-border last:border-0",
-                  sheet.isCoverSheet && "bg-amber-50 dark:bg-amber-950/20",
-                )}
-              >
-                <td className="px-3 py-2 font-medium">
-                  {sheet.isCoverSheet ? (
-                    <span className="text-amber-700 dark:text-amber-400">
-                      Cover
-                    </span>
-                  ) : (
-                    i + 1
-                  )}
-                </td>
-                <td className="px-3 py-2 text-muted-foreground">
-                  {sheet.sigIndex + 1}
-                </td>
-                <td className="px-3 py-2 border-l border-border">
-                  {fmt(sheet.front.left)}
-                </td>
-                <td className="px-3 py-2">{fmt(sheet.front.right)}</td>
-                <td className="px-3 py-2 border-l border-border">
-                  {fmt(sheet.back.left)}
-                </td>
-                <td className="px-3 py-2">{fmt(sheet.back.right)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
