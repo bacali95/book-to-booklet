@@ -15,30 +15,40 @@ const BookletEngine = (() => {
     // Build inner booklet sheets from an array of original page indices.
     // Pages beyond the array length become blank (-1).
     function buildInnerSheets(origIndices, S, direction) {
-        const n       = origIndices.length;
-        const padded  = Math.ceil(n / S) * S;
-        const numSig  = padded / S;
-        const shPerSig = S / 4;
-        const sheets  = [];
+        const n      = origIndices.length;
+        // Pad to multiple of 4 (min booklet unit), NOT S — avoids unnecessary blanks
+        // when the last signature would only be partially filled.
+        const padded = Math.ceil(n / 4) * 4;
+        const sheets = [];
+        let pos    = 0;
+        let sigIdx = 0;
 
-        for (let sig = 0; sig < numSig; sig++) {
-            const base = sig * S;
-            for (let sh = 0; sh < shPerSig; sh++) {
-                const pick = pos => pos < n ? origIndices[pos] : -1;
-                const fl = pick(base + S - 1 - 2*sh);
-                const fr = pick(base + 2*sh);
-                const bl = pick(base + 2*sh + 1);
-                const br = pick(base + S - 2 - 2*sh);
+        while (pos < padded) {
+            const rem     = padded - pos;
+            const sigSize = Math.min(S, rem); // last sig may be smaller than S
+            const shCount = sigSize / 4;
+
+            for (let sh = 0; sh < shCount; sh++) {
+                const pick = p => p < n ? origIndices[p] : -1;
+                const fl = pick(pos + sigSize - 1 - 2*sh);
+                const fr = pick(pos + 2*sh);
+                const bl = pick(pos + 2*sh + 1);
+                const br = pick(pos + sigSize - 2 - 2*sh);
                 sheets.push(direction === 'rtl'
-                    ? { sigIndex: sig, sheetIndex: sh,
+                    ? { sigIndex: sigIdx, sheetIndex: sh,
                         front: { left: fr, right: fl },
                         back:  { left: br, right: bl } }
-                    : { sigIndex: sig, sheetIndex: sh,
+                    : { sigIndex: sigIdx, sheetIndex: sh,
                         front: { left: fl, right: fr },
                         back:  { left: bl, right: br } }
                 );
             }
+            pos    += sigSize;
+            sigIdx += 1;
         }
+
+        const numSig   = sigIdx;
+        const shPerSig = S / 4;
         return { sheets, padded, numSig, shPerSig };
     }
 
