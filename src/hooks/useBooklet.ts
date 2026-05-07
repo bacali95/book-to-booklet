@@ -1,8 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { computeLayout, type BookletLayout, type Direction } from '@/lib/engine'
-import { loadPdfPages, renderTextPages, generateBookletPdf, type SourcePage } from '@/lib/renderer'
+import { loadPdfPages, generateBookletPdf, type SourcePage } from '@/lib/renderer'
 
-export type InputMode = 'pdf' | 'text'
 export type ScalingMode = 'fit' | 'fill' | 'actual' | 'custom'
 export type FlipMode = 'long' | 'short'
 export type PageNumbersMode = 'none' | 'bottom-center' | 'outer' | 'inner'
@@ -25,8 +24,6 @@ export interface BookletSettings {
   blankColor: BlankColor
   quality: number
   creepMm: number
-  textFont: string
-  textFontSize: number
 }
 
 export const DEFAULT_SETTINGS: BookletSettings = {
@@ -46,15 +43,12 @@ export const DEFAULT_SETTINGS: BookletSettings = {
   blankColor: 'white',
   quality: 2,
   creepMm: 0,
-  textFont: 'serif',
-  textFontSize: 11,
 }
 
 export interface BookletState {
   sourcePages: SourcePage[]
   pageCount: number
   layout: BookletLayout | null
-  inputMode: InputMode
   generating: boolean
   progress: { pct: number; text: string } | null
   settings: BookletSettings
@@ -66,7 +60,6 @@ export function useBooklet() {
     sourcePages: [],
     pageCount: 0,
     layout: null,
-    inputMode: 'pdf',
     generating: false,
     progress: null,
     settings: DEFAULT_SETTINGS,
@@ -110,15 +103,7 @@ export function useBooklet() {
       })
       setState(s => {
         const layout = recomputeLayout(pages.length, s.settings)
-        return {
-          ...s,
-          sourcePages: pages,
-          pageCount: pages.length,
-          layout,
-          inputMode: 'pdf',
-          pdfFile: file,
-          progress: null,
-        }
+        return { ...s, sourcePages: pages, pageCount: pages.length, layout, pdfFile: file, progress: null }
       })
     } catch (err) {
       setState(s => ({ ...s, progress: null }))
@@ -126,50 +111,19 @@ export function useBooklet() {
     }
   }, [recomputeLayout])
 
-  const loadText = useCallback((text: string, settings: BookletSettings) => {
-    if (!text.trim()) {
-      setState(s => ({ ...s, sourcePages: [], pageCount: 0, layout: null, pdfFile: null }))
-      return
-    }
-    const pages = renderTextPages(text, {
-      fontFamily: settings.textFont,
-      fontSize:   settings.textFontSize,
-      direction:  settings.direction,
-    })
-    setState(s => {
-      const layout = recomputeLayout(pages.length, s.settings)
-      return {
-        ...s,
-        sourcePages: pages,
-        pageCount: pages.length,
-        layout,
-        inputMode: 'text',
-        pdfFile: null,
-        progress: null,
-      }
-    })
-  }, [recomputeLayout])
-
   const clearSource = useCallback(() => {
-    setState(s => ({
-      ...s,
-      sourcePages: [],
-      pageCount: 0,
-      layout: null,
-      pdfFile: null,
-      progress: null,
-    }))
+    setState(s => ({ ...s, sourcePages: [], pageCount: 0, layout: null, pdfFile: null, progress: null }))
   }, [])
 
   const generate = useCallback(async () => {
-    const { sourcePages, layout, settings, inputMode, pdfFile, generating } = stateRef.current
+    const { sourcePages, layout, settings, pdfFile, generating } = stateRef.current
     if (generating || !layout) return
 
     setState(s => ({ ...s, generating: true, progress: { pct: 0, text: 'Generating booklet…' } }))
 
     try {
       let pages = sourcePages
-      if (inputMode === 'pdf' && settings.quality !== 2 && pdfFile) {
+      if (settings.quality !== 2 && pdfFile) {
         setState(s => ({ ...s, progress: { pct: 0, text: 'Re-rendering at chosen quality…' } }))
         pages = await loadPdfPages(pdfFile, settings.quality, (d, t) => {
           setState(s => ({
@@ -210,5 +164,5 @@ export function useBooklet() {
     }
   }, [])
 
-  return { state, updateSettings, loadPdf, loadText, clearSource, generate }
+  return { state, updateSettings, loadPdf, clearSource, generate }
 }

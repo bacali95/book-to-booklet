@@ -16,7 +16,7 @@ export default function App() {
     localStorage.setItem('theme', dark ? 'dark' : 'light')
   }, [dark])
 
-  const { state, updateSettings, loadPdf, loadText, clearSource, generate } = useBooklet()
+  const { state, updateSettings, loadPdf, clearSource, generate } = useBooklet()
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -39,7 +39,6 @@ export default function App() {
           state={state}
           onUpdateSettings={updateSettings}
           onLoadPdf={loadPdf}
-          onLoadText={loadText}
           onClear={clearSource}
           onGenerate={generate}
         />

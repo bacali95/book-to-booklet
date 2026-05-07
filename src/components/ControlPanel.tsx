@@ -16,12 +16,11 @@ interface Props {
   state: BookletState
   onUpdateSettings: (patch: Partial<BookletSettings>) => void
   onLoadPdf: (file: File) => void
-  onLoadText: (text: string, settings: BookletSettings) => void
   onClear: () => void
   onGenerate: () => void
 }
 
-export function ControlPanel({ state, onUpdateSettings, onLoadPdf, onLoadText, onClear, onGenerate }: Props) {
+export function ControlPanel({ state, onUpdateSettings, onLoadPdf, onClear, onGenerate }: Props) {
   const { settings, generating, progress, pageCount, pdfFile, layout } = state
   const canGenerate = !!layout && !generating
 
@@ -31,11 +30,8 @@ export function ControlPanel({ state, onUpdateSettings, onLoadPdf, onLoadText, o
       <InputSection
         pageCount={pageCount}
         pdfFile={pdfFile}
-        settings={settings}
         onLoadPdf={onLoadPdf}
-        onLoadText={onLoadText}
         onClear={onClear}
-        onSettingsChange={onUpdateSettings}
       />
 
       {/* Layout */}
