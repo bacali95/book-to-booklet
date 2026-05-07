@@ -286,6 +286,7 @@
             <div class="preview-tabs" role="tablist">
                 <button class="tab-btn active" data-tab="order" role="tab">Page Order</button>
                 <button class="tab-btn" data-tab="layout" role="tab">Sheet Table</button>
+                <button class="tab-btn" data-tab="book" role="tab">📖 Book View</button>
             </div>
         </div>
 
@@ -300,6 +301,42 @@
             </div>
             <div id="tabLayout" class="tab-content">
                 <div id="sheetLayoutList"></div>
+            </div>
+
+            <!-- Book View tab -->
+            <div id="tabBook" class="tab-content book-viewer-tab">
+                <div id="bookEmpty" class="book-viewer-empty hidden">
+                    Load a PDF or enter text to preview the assembled book
+                </div>
+                <div id="bookMain" class="book-main hidden">
+                    <!-- Direction badge -->
+                    <div id="bookDirBadge" class="book-dir-badge"></div>
+
+                    <!-- The open book -->
+                    <div class="book-scene">
+                        <div class="book-spread" id="bookSpread">
+                            <div class="book-half book-half-left" id="bookHalfLeft">
+                                <canvas id="bookCanvasLeft"></canvas>
+                                <span class="book-pg-label" id="bookLabelLeft"></span>
+                            </div>
+                            <div class="book-spine"></div>
+                            <div class="book-half book-half-right" id="bookHalfRight">
+                                <canvas id="bookCanvasRight"></canvas>
+                                <span class="book-pg-label" id="bookLabelRight"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation -->
+                    <div class="book-nav">
+                        <button id="bookFirst" class="btn btn-sm" title="First page">⏮</button>
+                        <button id="bookPrev"  class="btn"        title="Previous spread (←)">← Prev</button>
+                        <span id="bookInfo" class="book-info-text"></span>
+                        <button id="bookNext"  class="btn"        title="Next spread (→)">Next →</button>
+                        <button id="bookLast"  class="btn btn-sm" title="Last page">⏭</button>
+                    </div>
+                    <p class="book-hint">Use ← → arrow keys or click to navigate</p>
+                </div>
             </div>
         </div>
     </section>

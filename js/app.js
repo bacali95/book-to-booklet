@@ -227,6 +227,7 @@
         setEmpty(false);
         renderPageOrderGrid(layout, pageCount);
         renderSheetLayout(layout, pageCount, direction);
+        updateBookView();
     }
 
     function renderPageOrderGrid(layout, pageCount) {
@@ -392,6 +393,153 @@
 
         sheetLayoutList.appendChild(table);
     }
+
+    /* ── Book View ────────────────────────────────────────────────── */
+    const bookState = { spreads: [], idx: 0 };
+
+    // Build spread descriptors: {left, right} = 0-based page indices, -1 = blank
+    function buildSpreads(pageCount, direction) {
+        const s = [];
+        if (!pageCount) return s;
+
+        // Spread 0: cover (p.1 always on right — single page visible)
+        s.push({ left: -1, right: 0, isCover: true });
+
+        // Inner pages: indices 1..pageCount-2
+        for (let i = 1; i <= pageCount - 2; i += 2) {
+            const a = i;
+            const b = (i + 1 <= pageCount - 2) ? i + 1 : -1;
+            // LTR: lower # on left (read left then right)
+            // RTL: lower # on right (read right then left)
+            s.push(direction === 'rtl' ? { left: b, right: a } : { left: a, right: b });
+        }
+
+        // Last spread: back cover on left (single page)
+        if (pageCount > 1) s.push({ left: pageCount - 1, right: -1, isBack: true });
+
+        return s;
+    }
+
+    function updateBookView() {
+        if (!state.pageCount || !state.layout) {
+            $('bookEmpty').classList.remove('hidden');
+            $('bookMain').classList.add('hidden');
+            return;
+        }
+        $('bookEmpty').classList.add('hidden');
+        $('bookMain').classList.remove('hidden');
+
+        const dir = state.layout.direction;
+        bookState.spreads = buildSpreads(state.pageCount, dir);
+        bookState.idx     = 0;
+
+        // Direction badge
+        $('bookDirBadge').textContent = dir === 'rtl'
+            ? '→ Right-to-Left (RTL) · spine on right'
+            : '← Left-to-Right (LTR) · spine on left';
+
+        // Size the page halves from first source page aspect ratio
+        const src = state.sourcePages[0];
+        const aspect = src
+            ? (src.naturalW || (src.canvas||src).width) / (src.naturalH || (src.canvas||src).height)
+            : 1 / Math.SQRT2;
+        const H = Math.min(420, Math.floor((window.innerHeight - 360)));
+        const W = Math.round(H * aspect);
+        document.documentElement.style.setProperty('--bk-w', W + 'px');
+        document.documentElement.style.setProperty('--bk-h', H + 'px');
+
+        renderBookSpread();
+    }
+
+    function renderBookSpread() {
+        const { spreads, idx } = bookState;
+        const spread = spreads[idx];
+        if (!spread) return;
+
+        drawBookPage($('bookCanvasLeft'),  $('bookHalfLeft'),  $('bookLabelLeft'),  spread.left);
+        drawBookPage($('bookCanvasRight'), $('bookHalfRight'), $('bookLabelRight'), spread.right);
+
+        // Info line
+        const isCover = spread.isCover;
+        const isBack  = spread.isBack;
+        const label   = isCover ? 'Front Cover'
+                      : isBack  ? 'Back Cover'
+                      : `Pages ${labelFor(spread.left, spread.right, state.layout.direction)}`;
+        $('bookInfo').textContent = `${idx + 1} / ${spreads.length} — ${label}`;
+
+        $('bookFirst').disabled = idx === 0;
+        $('bookPrev').disabled  = idx === 0;
+        $('bookNext').disabled  = idx === spreads.length - 1;
+        $('bookLast').disabled  = idx === spreads.length - 1;
+    }
+
+    function labelFor(l, r, dir) {
+        const fmt = i => i >= 0 ? `p.${i + 1}` : '—';
+        return dir === 'rtl'
+            ? `${fmt(r)} & ${fmt(l)}`   // right is read first in RTL
+            : `${fmt(l)} & ${fmt(r)}`;
+    }
+
+    function drawBookPage(canvas, half, label, pageIdx) {
+        const W = parseInt(getComputedStyle(document.documentElement)
+                    .getPropertyValue('--bk-w')) || 240;
+        const H = parseInt(getComputedStyle(document.documentElement)
+                    .getPropertyValue('--bk-h')) || 340;
+        const SCALE = 2;
+
+        canvas.width  = W * SCALE;
+        canvas.height = H * SCALE;
+        canvas.style.width  = W + 'px';
+        canvas.style.height = H + 'px';
+
+        const ctx = canvas.getContext('2d');
+
+        if (pageIdx < 0) {
+            // Blank / outside-of-book side
+            half.classList.add('is-blank');
+            ctx.fillStyle = document.documentElement.dataset.theme === 'dark' ? '#1c1c1e' : '#f0f0f0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            label.textContent = '';
+            return;
+        }
+
+        half.classList.remove('is-blank');
+        ctx.fillStyle = document.documentElement.dataset.theme === 'dark' ? '#2a2a2c' : '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const src = state.sourcePages[pageIdx];
+        if (src) {
+            const srcC = src.canvas || src;
+            const srcW = src.naturalW || srcC.width;
+            const srcH = src.naturalH || srcC.height;
+            const sc   = Math.min((W * SCALE) / srcW, (H * SCALE) / srcH);
+            const dw   = srcW * sc;
+            const dh   = srcH * sc;
+            const dx   = (W * SCALE - dw) / 2;
+            const dy   = (H * SCALE - dh) / 2;
+            ctx.drawImage(srcC, dx, dy, dw, dh);
+        }
+
+        label.textContent = `p.${pageIdx + 1}`;
+    }
+
+    // Book navigation buttons
+    $('bookPrev').addEventListener('click',  () => { if (bookState.idx > 0) { bookState.idx--; renderBookSpread(); } });
+    $('bookNext').addEventListener('click',  () => { if (bookState.idx < bookState.spreads.length - 1) { bookState.idx++; renderBookSpread(); } });
+    $('bookFirst').addEventListener('click', () => { bookState.idx = 0; renderBookSpread(); });
+    $('bookLast').addEventListener('click',  () => { bookState.idx = bookState.spreads.length - 1; renderBookSpread(); });
+
+    // Keyboard navigation (only when book tab is visible)
+    document.addEventListener('keydown', e => {
+        if (!$('tabBook').classList.contains('active')) return;
+        if (e.key === 'ArrowLeft')  { e.preventDefault(); (state.layout?.direction === 'rtl' ? $('bookNext') : $('bookPrev')).click(); }
+        if (e.key === 'ArrowRight') { e.preventDefault(); (state.layout?.direction === 'rtl' ? $('bookPrev') : $('bookNext')).click(); }
+        if (e.key === ' ')          { e.preventDefault(); $('bookNext').click(); }
+    });
+
+    // Click half to advance
+    $('bookHalfRight').addEventListener('click', () => $('bookNext').click());
+    $('bookHalfLeft').addEventListener('click',  () => $('bookPrev').click());
 
     /* ── Generate ─────────────────────────────────────────────────── */
     generateBtn.addEventListener('click', async () => {
