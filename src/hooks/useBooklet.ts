@@ -28,7 +28,6 @@ export interface BookletSettings {
   separateCover: boolean;
   cropMarks: boolean;
   centerLine: boolean;
-  blankPageMark: boolean;
   blankColor: BlankColor;
   quality: number;
   creepMm: number;
@@ -47,7 +46,6 @@ export const DEFAULT_SETTINGS: BookletSettings = {
   separateCover: true,
   cropMarks: false,
   centerLine: false,
-  blankPageMark: false,
   blankColor: "white",
   quality: 2,
   creepMm: 0,

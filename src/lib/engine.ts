@@ -38,7 +38,7 @@ export interface LayoutOptions {
   separateCover?: boolean;
 }
 
-export const PAPER_SIZES: Record<string, { w: number; h: number }> = {
+const PAPER_SIZES: Record<string, { w: number; h: number }> = {
   A3: { w: 841.89, h: 1190.55 },
   A4: { w: 595.28, h: 841.89 },
   A5: { w: 419.53, h: 595.28 },

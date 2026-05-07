@@ -439,11 +439,6 @@ export function ControlPanel({ state, onUpdateSettings, onGenerate }: Props) {
                 checked={settings.centerLine}
                 onChange={(v) => onUpdateSettings({ centerLine: v })}
               />
-              <CheckRow
-                label="Mark blank pages (debug)"
-                checked={settings.blankPageMark}
-                onChange={(v) => onUpdateSettings({ blankPageMark: v })}
-              />
             </Section>
 
             <Section title="Blank pages" icon="grid">
