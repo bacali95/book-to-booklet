@@ -9,6 +9,7 @@ import {
   generateBookletPdf,
   type SourcePage,
 } from "@/lib/renderer";
+import i18n from "@/i18n";
 
 export type ScalingMode = "fit" | "fill" | "actual" | "custom";
 export type FlipMode = "long" | "short";
@@ -104,14 +105,17 @@ export function useBooklet() {
 
   const loadPdf = useCallback(
     async (file: File) => {
-      setState((s) => ({ ...s, progress: { pct: 0, text: "Loading PDF…" } }));
+      setState((s) => ({
+        ...s,
+        progress: { pct: 0, text: i18n.t("progress.loadingPdf") },
+      }));
       try {
         const pages = await loadPdfPages(file, 2, (done, total) => {
           setState((s) => ({
             ...s,
             progress: {
               pct: (done / total) * 100,
-              text: `Loading page ${done}/${total}…`,
+              text: i18n.t("progress.loadingPage", { done, total }),
             },
           }));
         });
@@ -153,7 +157,7 @@ export function useBooklet() {
     setState((s) => ({
       ...s,
       generating: true,
-      progress: { pct: 0, text: "Generating booklet…" },
+      progress: { pct: 0, text: i18n.t("progress.generating") },
     }));
 
     try {
@@ -161,12 +165,15 @@ export function useBooklet() {
       if (settings.quality !== 2 && pdfFile) {
         setState((s) => ({
           ...s,
-          progress: { pct: 0, text: "Re-rendering at chosen quality…" },
+          progress: { pct: 0, text: i18n.t("progress.reRendering") },
         }));
-        pages = await loadPdfPages(pdfFile, settings.quality, (d, t) => {
+        pages = await loadPdfPages(pdfFile, settings.quality, (d, tot) => {
           setState((s) => ({
             ...s,
-            progress: { pct: (d / t) * 40, text: `Rendering page ${d}/${t}…` },
+            progress: {
+              pct: (d / tot) * 40,
+              text: i18n.t("progress.renderingPage", { done: d, total: tot }),
+            },
           }));
         });
       }
@@ -189,7 +196,7 @@ export function useBooklet() {
             ...s,
             progress: {
               pct: 40 + (done / total) * 60,
-              text: `Imposing page ${done}/${total}…`,
+              text: i18n.t("progress.imposingPage", { done, total }),
             },
           }));
         },

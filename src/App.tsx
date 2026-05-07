@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ControlPanel } from "./components/ControlPanel";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { useBooklet } from "./hooks/useBooklet";
+import { LANGUAGES, RTL_LANGS, type LangCode } from "./i18n";
 
 export default function App() {
+  const { t, i18n } = useTranslation();
+
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     const s = localStorage.getItem("theme");
     if (s === "dark" || s === "light") return s;
@@ -16,6 +20,10 @@ export default function App() {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.dir = RTL_LANGS.has(i18n.language) ? "rtl" : "ltr";
+  }, [i18n.language]);
 
   const { state, updateSettings, loadPdf, clearSource, generate } =
     useBooklet();
@@ -60,10 +68,10 @@ export default function App() {
             </div>
             <div>
               <div className="font-semibold text-[14px] tracking-[-0.01em]">
-                Booklet
+                {t("app.title")}
               </div>
               <div className="text-[11px] text-fg3 font-mono tracking-[0.02em]">
-                PDF imposition
+                {t("app.subtitle")}
               </div>
             </div>
           </div>
@@ -71,7 +79,7 @@ export default function App() {
           {pdfFile && layout && (
             <>
               <div className="w-px h-6 bg-line" />
-              <div className="flex items-center gap-2.5 px-3 py-1.5 pr-2 bg-e2 border border-line rounded-[6px]">
+              <div className="flex items-center gap-2.5 px-3 py-1.5 pe-2 bg-e2 border border-line rounded-[6px]">
                 <svg
                   width={14}
                   height={14}
@@ -91,12 +99,15 @@ export default function App() {
                     {pdfFile.name}
                   </span>
                   <span className="text-[11px] text-fg3 font-mono">
-                    {state.pageCount} pages · {sheetCount} sheets
+                    {t("app.pagesSheets", {
+                      pages: state.pageCount,
+                      sheets: sheetCount,
+                    })}
                   </span>
                 </div>
                 <button
                   onClick={clearSource}
-                  title="Remove file"
+                  title={t("app.removeFile")}
                   className="w-[22px] h-[22px] rounded grid place-items-center text-fg3 hover:bg-e3 hover:text-fg border-none bg-transparent cursor-pointer"
                 >
                   <svg
@@ -117,39 +128,70 @@ export default function App() {
           )}
         </div>
 
-        <button
-          onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-          className="w-8 h-8 rounded-lg border border-transparent bg-transparent text-fg2 grid place-items-center cursor-pointer hover:bg-e2 hover:border-line transition-all"
-        >
-          {theme === "dark" ? (
+        <div className="flex items-center gap-2">
+          {/* Language switcher */}
+          <div className="relative flex items-center">
+            <select
+              value={i18n.language}
+              onChange={(e) => i18n.changeLanguage(e.target.value as LangCode)}
+              className="h-8 ps-2.5 pe-7 bg-transparent text-fg2 border border-transparent rounded-lg text-[13px] font-sans cursor-pointer appearance-none focus:outline-2 focus:outline-accent hover:bg-e2 hover:border-line transition-all"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l.code} value={l.code}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
             <svg
-              width={15}
-              height={15}
+              width={11}
+              height={11}
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.75"
               strokeLinecap="round"
               strokeLinejoin="round"
+              className="absolute end-2 pointer-events-none text-fg3"
             >
-              <circle cx="12" cy="12" r="4" />
-              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+              <path d="m6 9 6 6 6-6" />
             </svg>
-          ) : (
-            <svg
-              width={15}
-              height={15}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-            </svg>
-          )}
-        </button>
+          </div>
+
+          {/* Theme toggle */}
+          <button
+            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            className="w-8 h-8 rounded-lg border border-transparent bg-transparent text-fg2 grid place-items-center cursor-pointer hover:bg-e2 hover:border-line transition-all"
+          >
+            {theme === "dark" ? (
+              <svg
+                width={15}
+                height={15}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="4" />
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+              </svg>
+            ) : (
+              <svg
+                width={15}
+                height={15}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            )}
+          </button>
+        </div>
       </header>
 
       {!pdfFile ? (
@@ -180,13 +222,9 @@ export default function App() {
             </div>
 
             <h1 className="text-[22px] font-semibold tracking-[-0.02em] mb-2.5 text-fg">
-              Turn any PDF into a print-ready booklet
+              {t("app.emptyHeading")}
             </h1>
-            <p className="text-fg2 text-[14px] mb-7">
-              Drop a PDF here. We'll re-order the pages so when you print
-              double-sided and fold, you get a real booklet — pages in the right
-              order, every time.
-            </p>
+            <p className="text-fg2 text-[14px] mb-7">{t("app.emptyDesc")}</p>
 
             {progress ? (
               <div className="flex flex-col items-center gap-2 mt-6">
@@ -218,33 +256,33 @@ export default function App() {
                   >
                     <path d="M12 3v12M7 8l5-5 5 5M5 21h14" />
                   </svg>
-                  Choose a PDF
+                  {t("app.choosePdf")}
                 </button>
                 <p className="text-[12px] text-fg3 font-mono mt-3">
-                  or drag &amp; drop · max 200 MB · processed in your browser
+                  {t("app.dropHint")}
                 </p>
               </>
             )}
 
             <div className="flex items-center justify-center gap-2 mt-8 pt-6 border-t border-line">
-              {(["Upload", "Configure", "Print & fold"] as const).map(
-                (step, i) => (
-                  <>
-                    {i > 0 && (
-                      <div key={`line-${i}`} className="w-8 h-px bg-line" />
-                    )}
-                    <div
-                      key={step}
-                      className="flex items-center gap-2 text-[12px] text-fg2 font-medium"
-                    >
-                      <span className="w-[22px] h-[22px] rounded-full bg-e3 text-fg grid place-items-center text-[11px] font-semibold font-mono">
-                        {i + 1}
-                      </span>
-                      {step}
-                    </div>
-                  </>
-                ),
-              )}
+              {(
+                [t("app.step1"), t("app.step2"), t("app.step3")] as string[]
+              ).map((step, i) => (
+                <>
+                  {i > 0 && (
+                    <div key={`line-${i}`} className="w-8 h-px bg-line" />
+                  )}
+                  <div
+                    key={step}
+                    className="flex items-center gap-2 text-[12px] text-fg2 font-medium"
+                  >
+                    <span className="w-[22px] h-[22px] rounded-full bg-e3 text-fg grid place-items-center text-[11px] font-semibold font-mono">
+                      {i + 1}
+                    </span>
+                    {step}
+                  </div>
+                </>
+              ))}
             </div>
           </div>
 

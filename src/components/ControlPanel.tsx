@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { BookletSettings, BookletState } from "@/hooks/useBooklet";
 
 /* ── tiny SVG icon helper ── */
@@ -141,7 +142,7 @@ function SelectRow({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full py-2 pl-3 pr-8 bg-e1 text-fg border border-line rounded-[7px] text-[13px] font-sans cursor-pointer appearance-none focus:outline-2 focus:outline-accent focus:outline-offset-[-1px]"
+          className="w-full py-2 ps-3 pe-8 bg-e1 text-fg border border-line rounded-[7px] text-[13px] font-sans cursor-pointer appearance-none focus:outline-2 focus:outline-accent focus:outline-offset-[-1px]"
         >
           {options.map((o) => (
             <option key={o.value} value={o.value}>
@@ -152,7 +153,7 @@ function SelectRow({
         <Svg
           d={IC.chevD}
           size={12}
-          className="absolute right-2.5 pointer-events-none text-fg3"
+          className="absolute end-2.5 pointer-events-none text-fg3"
         />
       </div>
     </div>
@@ -247,19 +248,23 @@ interface Props {
 }
 
 export function ControlPanel({ state, onUpdateSettings, onGenerate }: Props) {
+  const { t } = useTranslation();
   const { settings, generating, progress, pageCount, layout } = state;
   const [showAdv, setShowAdv] = useState(false);
 
   const canGenerate = !!layout && !generating;
   const sheetCount = layout?.sheets.length ?? 0;
 
+  const flipLabel =
+    settings.flip === "long" ? t("control.flipLong") : t("control.flipShort");
+
   return (
-    <aside className="border-r border-line bg-e1 flex flex-col min-h-0 overflow-hidden">
+    <aside className="border-e border-line bg-e1 flex flex-col min-h-0 overflow-hidden">
       {/* Scrollable settings */}
       <div className="flex-1 min-h-0 overflow-y-auto p-3.5 flex flex-col gap-2">
-        <Section title="Reading & layout" icon="book">
+        <Section title={t("control.readingLayout")} icon="book">
           <SegRow
-            label="Reading direction"
+            label={t("control.readingDirection")}
             value={settings.direction}
             onChange={(v) =>
               onUpdateSettings({ direction: v as "ltr" | "rtl" })
@@ -271,26 +276,30 @@ export function ControlPanel({ state, onUpdateSettings, onGenerate }: Props) {
           />
 
           <SelectRow
-            label="Pages per signature"
+            label={t("control.pagesPerSig")}
             value={String(settings.signatureSize)}
             onChange={(v) => onUpdateSettings({ signatureSize: Number(v) })}
-            hint="Larger = fewer bindings"
+            hint={t("control.sigHint")}
             options={[
-              { value: "0", label: "Auto — single saddle stitch" },
-              { value: "4", label: "1 sheet · 4 pages/sig" },
-              { value: "8", label: "2 sheets · 8 pages/sig" },
-              { value: "16", label: "4 sheets · 16 pages/sig" },
-              { value: "32", label: "8 sheets · 32 pages/sig" },
+              { value: "0", label: t("control.sigAuto") },
+              { value: "4", label: t("control.sig4") },
+              { value: "8", label: t("control.sig8") },
+              { value: "16", label: t("control.sig16") },
+              { value: "32", label: t("control.sig32") },
             ]}
           />
 
           <SegRow
-            label="Duplex flip"
+            label={t("control.duplexFlip")}
             value={settings.flip}
             onChange={(v) => onUpdateSettings({ flip: v as "long" | "short" })}
             options={[
-              { value: "long", label: "Long edge", sub: "default" },
-              { value: "short", label: "Short edge" },
+              {
+                value: "long",
+                label: t("control.longEdge"),
+                sub: t("control.longEdgeSub"),
+              },
+              { value: "short", label: t("control.shortEdge") },
             ]}
           />
 
@@ -309,23 +318,25 @@ export function ControlPanel({ state, onUpdateSettings, onGenerate }: Props) {
               className="text-accent mt-0.5 shrink-0"
             />
             <div>
-              <strong className="font-semibold">In your printer dialog:</strong>{" "}
-              Orientation →{" "}
+              <strong className="font-semibold">
+                {t("control.printerDialog")}
+              </strong>{" "}
+              {t("control.orientationArrow")}{" "}
               <em className="not-italic font-mono font-semibold text-accent">
-                Landscape
+                {t("control.landscape")}
               </em>
               {" · "}
-              Two-sided →{" "}
+              {t("control.twoSidedArrow")}{" "}
               <em className="not-italic font-mono font-semibold text-accent">
-                Flip on {settings.flip} edge
+                {t("control.flipOnEdge", { flip: flipLabel })}
               </em>
             </div>
           </div>
         </Section>
 
-        <Section title="Paper" icon="layers">
+        <Section title={t("control.paper")} icon="layers">
           <SelectRow
-            label="Output paper size"
+            label={t("control.outputPaperSize")}
             value={settings.paperSize}
             onChange={(v) => onUpdateSettings({ paperSize: v })}
             options={[
@@ -339,23 +350,23 @@ export function ControlPanel({ state, onUpdateSettings, onGenerate }: Props) {
           />
 
           <SegRow
-            label="Page scaling"
+            label={t("control.pageScaling")}
             value={settings.scaling}
             onChange={(v) =>
               onUpdateSettings({ scaling: v as BookletSettings["scaling"] })
             }
             options={[
-              { value: "fit", label: "Fit" },
-              { value: "fill", label: "Fill" },
-              { value: "actual", label: "Actual" },
-              { value: "custom", label: "Custom" },
+              { value: "fit", label: t("control.scaleFit") },
+              { value: "fill", label: t("control.scaleFill") },
+              { value: "actual", label: t("control.scaleActual") },
+              { value: "custom", label: t("control.scaleCustom") },
             ]}
           />
 
           {settings.scaling === "custom" && (
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] uppercase tracking-[0.06em] text-fg2 font-semibold">
-                Scale factor
+                {t("control.scaleFactor")}
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -369,24 +380,26 @@ export function ControlPanel({ state, onUpdateSettings, onGenerate }: Props) {
                   }
                   className="w-18 py-2 px-2 bg-e1 text-fg border border-line rounded-[7px] text-[13px] font-mono text-center focus:outline-2 focus:outline-accent"
                 />
-                <span className="text-[11px] text-fg3">× (1.0 = 100%)</span>
+                <span className="text-[11px] text-fg3">
+                  {t("control.scaleFactorHint")}
+                </span>
               </div>
             </div>
           )}
         </Section>
 
-        <Section title="Margins" icon="sliders">
+        <Section title={t("control.margins")} icon="sliders">
           <SliderRow
-            label="Binding (gutter)"
+            label={t("control.bindingGutter")}
             value={settings.bindingMarginMm}
             min={0}
             max={30}
             step={1}
             onChange={(v) => onUpdateSettings({ bindingMarginMm: v })}
-            hint="Extra space on the inside edge for the fold"
+            hint={t("control.bindingHint")}
           />
           <SliderRow
-            label="Outer margin"
+            label={t("control.outerMargin")}
             value={settings.outerMarginMm}
             min={0}
             max={20}
@@ -402,14 +415,14 @@ export function ControlPanel({ state, onUpdateSettings, onGenerate }: Props) {
             ${showAdv ? "border-line text-fg bg-e2" : "border-dashed border-line text-fg2 bg-transparent hover:bg-e2 hover:text-fg hover:border-solid"}`}
         >
           <Svg d={showAdv ? IC.chevD : IC.chevR} size={13} />
-          Advanced options
+          {t("control.advancedOptions")}
         </button>
 
         {showAdv && (
           <>
-            <Section title="Page numbers & marks" icon="settings">
+            <Section title={t("control.pageNumbersMarks")} icon="settings">
               <SelectRow
-                label="Page numbers"
+                label={t("control.pageNumbers")}
                 value={settings.pageNumbers}
                 onChange={(v) =>
                   onUpdateSettings({
@@ -417,67 +430,67 @@ export function ControlPanel({ state, onUpdateSettings, onGenerate }: Props) {
                   })
                 }
                 options={[
-                  { value: "none", label: "None" },
-                  { value: "bottom-center", label: "Bottom center" },
-                  { value: "outer", label: "Outer corner" },
-                  { value: "inner", label: "Inner (binding) edge" },
+                  { value: "none", label: t("control.pageNumNone") },
+                  { value: "bottom-center", label: t("control.pageNumBottom") },
+                  { value: "outer", label: t("control.pageNumOuter") },
+                  { value: "inner", label: t("control.pageNumInner") },
                 ]}
               />
               <CheckRow
-                label="Separate cover sheet"
-                hint="Print front-only, leave back blank"
+                label={t("control.separateCover")}
+                hint={t("control.separateCoverHint")}
                 checked={settings.separateCover}
                 onChange={(v) => onUpdateSettings({ separateCover: v })}
               />
               <CheckRow
-                label="Crop / trim marks"
+                label={t("control.cropMarks")}
                 checked={settings.cropMarks}
                 onChange={(v) => onUpdateSettings({ cropMarks: v })}
               />
               <CheckRow
-                label="Center fold guide line"
+                label={t("control.centerLine")}
                 checked={settings.centerLine}
                 onChange={(v) => onUpdateSettings({ centerLine: v })}
               />
             </Section>
 
-            <Section title="Blank pages" icon="grid">
+            <Section title={t("control.blankPages")} icon="grid">
               <SegRow
-                label="Fill"
+                label={t("control.fill")}
                 value={settings.blankColor}
                 onChange={(v) =>
                   onUpdateSettings({ blankColor: v as "white" | "gray" })
                 }
                 options={[
-                  { value: "white", label: "White" },
-                  { value: "gray", label: "Light gray" },
+                  { value: "white", label: t("control.blankWhite") },
+                  { value: "gray", label: t("control.blankGray") },
                 ]}
               />
             </Section>
 
             <Section
-              title="Quality & creep"
+              title={t("control.qualityCreep")}
               icon="settings"
               defaultOpen={false}
             >
               <SelectRow
-                label="Render quality"
+                label={t("control.renderQuality")}
                 value={String(settings.quality)}
                 onChange={(v) => onUpdateSettings({ quality: Number(v) })}
                 options={[
-                  { value: "1.5", label: "Draft (1.5×, fast)" },
-                  { value: "2", label: "High (2×, recommended)" },
-                  { value: "3", label: "Ultra (3×, slow)" },
+                  { value: "1.5", label: t("control.qualityDraft") },
+                  { value: "2", label: t("control.qualityHigh") },
+                  { value: "3", label: t("control.qualityUltra") },
                 ]}
               />
               <SliderRow
-                label="Creep compensation"
+                label={t("control.creepCompensation")}
                 value={settings.creepMm}
                 min={0}
                 max={3}
                 step={0.1}
                 onChange={(v) => onUpdateSettings({ creepMm: v })}
-                hint="Shifts inner pages outward to compensate for paper thickness"
+                hint={t("control.creepHint")}
               />
             </Section>
           </>
@@ -506,9 +519,12 @@ export function ControlPanel({ state, onUpdateSettings, onGenerate }: Props) {
               {sheetCount}
             </span>
             <div className="flex flex-col text-[12px] leading-snug">
-              <span>sheets · {pageCount} pages</span>
+              <span>{t("control.sheetsPages", { pages: pageCount })}</span>
               <span className="text-fg3 font-mono text-[11px]">
-                {settings.paperSize} · duplex on {settings.flip} edge
+                {t("control.duplexInfo", {
+                  paper: settings.paperSize,
+                  flip: flipLabel,
+                })}
               </span>
             </div>
           </div>
@@ -524,7 +540,7 @@ export function ControlPanel({ state, onUpdateSettings, onGenerate }: Props) {
           ) : (
             <Svg d={IC.download} size={15} />
           )}
-          {generating ? "Generating…" : "Generate Booklet PDF"}
+          {generating ? t("control.generatingBtn") : t("control.generateBtn")}
         </button>
       </div>
     </aside>

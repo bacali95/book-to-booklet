@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import type { Direction } from "@/lib/engine";
 import type { SourcePage } from "@/lib/renderer";
 
@@ -78,6 +79,7 @@ interface Props {
 }
 
 export function BookViewTab({ pageCount, direction, sourcePages }: Props) {
+  const { t } = useTranslation();
   const spreads = buildSpreads(pageCount, direction);
   const [idx, setIdx] = useState(0);
   useEffect(() => setIdx(0), [pageCount, direction]);
@@ -115,10 +117,10 @@ export function BookViewTab({ pageCount, direction, sourcePages }: Props) {
 
   const pct = spreads.length > 1 ? (idx / (spreads.length - 1)) * 100 : 0;
   const label = spread.isCover
-    ? "Cover"
+    ? t("bookView.cover")
     : spread.isBack
-      ? "Back cover"
-      : `Spread ${idx} / ${spreads.length - 2}`;
+      ? t("bookView.backCover")
+      : t("bookView.spread", { current: idx, total: spreads.length - 2 });
 
   const ArrowLeft = () => (
     <svg
@@ -164,7 +166,7 @@ export function BookViewTab({ pageCount, direction, sourcePages }: Props) {
               height={H}
             />
             {spread.left >= 0 && (
-              <div className="absolute bottom-1.5 left-2 text-[9px] font-mono text-paper-fg/50">
+              <div className="absolute bottom-1.5 start-2 text-[9px] font-mono text-paper-fg/50">
                 {spread.left + 1}
               </div>
             )}
@@ -178,7 +180,7 @@ export function BookViewTab({ pageCount, direction, sourcePages }: Props) {
               height={H}
             />
             {spread.right >= 0 && (
-              <div className="absolute bottom-1.5 right-2 text-[9px] font-mono text-paper-fg/50">
+              <div className="absolute bottom-1.5 end-2 text-[9px] font-mono text-paper-fg/50">
                 {spread.right + 1}
               </div>
             )}
@@ -214,7 +216,9 @@ export function BookViewTab({ pageCount, direction, sourcePages }: Props) {
 
       <div>
         <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-e2 border border-line text-[11px] font-mono text-fg3">
-          {direction === "rtl" ? "RTL → spine on right" : "LTR ← spine on left"}
+          {direction === "rtl"
+            ? t("bookView.rtlLabel")
+            : t("bookView.ltrLabel")}
         </span>
       </div>
     </div>

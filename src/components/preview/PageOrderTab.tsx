@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import type { BookletLayout } from "@/lib/engine";
 import type { SourcePage } from "@/lib/renderer";
 
@@ -19,6 +20,7 @@ function PageThumb({
   sourcePages: SourcePage[];
   pageCount: number;
 }) {
+  const { t } = useTranslation();
   const isBlank = idx < 0;
   const isCover = idx === 0;
   const isBack = idx === pageCount - 1 && pageCount > 1;
@@ -54,7 +56,7 @@ function PageThumb({
           />
         ) : isBlank ? (
           <div className="absolute inset-0 flex items-center justify-center text-[10px] font-mono text-fg3">
-            blank
+            {t("pageOrder.blank")}
           </div>
         ) : (
           <>
@@ -67,24 +69,24 @@ function PageThumb({
                 />
               ))}
             </div>
-            <div className="absolute bottom-1 right-1 text-[9px] font-mono bg-e3/80 text-fg2 px-1 rounded">
+            <div className="absolute bottom-1 end-1 text-[9px] font-mono bg-e3/80 text-fg2 px-1 rounded">
               {idx + 1}
             </div>
           </>
         )}
         {!isBlank && imgSrc && (
-          <div className="absolute bottom-1 right-1 text-[9px] font-mono bg-black/30 text-white px-1 rounded">
+          <div className="absolute bottom-1 end-1 text-[9px] font-mono bg-black/30 text-white px-1 rounded">
             {idx + 1}
           </div>
         )}
         {isCover && (
-          <div className="absolute top-1 left-1 text-[9px] font-semibold bg-accent text-accent-fg px-1 rounded leading-4">
-            cover
+          <div className="absolute top-1 start-1 text-[9px] font-semibold bg-accent text-accent-fg px-1 rounded leading-4">
+            {t("pageOrder.coverLabel")}
           </div>
         )}
         {isBack && (
-          <div className="absolute top-1 left-1 text-[9px] font-semibold bg-fg3/60 text-white px-1 rounded leading-4">
-            back
+          <div className="absolute top-1 start-1 text-[9px] font-semibold bg-fg3/60 text-white px-1 rounded leading-4">
+            {t("pageOrder.backLabel")}
           </div>
         )}
       </div>
@@ -103,8 +105,9 @@ function SheetCard({
   pageCount: number;
   isCover: boolean;
 }) {
+  const { t } = useTranslation();
   const sheetNum = sheet.sheetIndex >= 0 ? sheet.sheetIndex + 1 : undefined;
-  const fmt = (n: number) => (n >= 0 ? `p.${n + 1}` : "blank");
+  const fmt = (n: number) => (n >= 0 ? `p.${n + 1}` : t("pageOrder.blank"));
 
   return (
     <div
@@ -128,7 +131,9 @@ function SheetCard({
         }}
       >
         <div className="flex items-center gap-2 text-[13px] font-semibold text-fg">
-          {isCover ? "Cover sheet" : `Sheet ${sheetNum}`}
+          {isCover
+            ? t("pageOrder.coverSheet")
+            : t("sheetTable.sheet", { num: sheetNum })}
           {isCover && (
             <span
               className="text-[11px] font-mono font-normal px-1.5 py-0.5 rounded"
@@ -138,18 +143,18 @@ function SheetCard({
                 color: "var(--accent)",
               }}
             >
-              prints front only
+              {t("pageOrder.printsFrontOnly")}
             </span>
           )}
         </div>
       </div>
       <div className="flex divide-y divide-line">
         {[
-          { label: "Front", side: sheet.front, isFront: true },
-          { label: "Back", side: sheet.back, isFront: false },
-        ].map(({ label, side, isFront }) => (
+          { labelKey: "pageOrder.front", side: sheet.front, isFront: true },
+          { labelKey: "pageOrder.back", side: sheet.back, isFront: false },
+        ].map(({ labelKey, side, isFront }) => (
           <div
-            key={label}
+            key={labelKey}
             className="px-4 py-3 flex flex-col gap-2 w-full"
             style={isCover && !isFront ? { opacity: 0.35 } : undefined}
           >
@@ -157,9 +162,9 @@ function SheetCard({
               <span
                 className={`w-2 h-2 rounded-full ${isFront ? "bg-accent" : "bg-fg3"}`}
               />
-              {label}
-              <span className="ml-auto text-[11px] font-mono text-fg3">
-                side {isFront ? 1 : 2}
+              {t(labelKey)}
+              <span className="ms-auto text-[11px] font-mono text-fg3">
+                {t("pageOrder.side", { num: isFront ? 1 : 2 })}
               </span>
             </div>
             <div className="flex items-center w-full justify-center">
@@ -187,6 +192,7 @@ function SheetCard({
 }
 
 export function PageOrderTab({ layout, sourcePages, pageCount }: Props) {
+  const { t } = useTranslation();
   const coverSheet = layout.sheets.find((s) => s.isCoverSheet);
   const innerSheets = layout.sheets.filter((s) => !s.isCoverSheet);
 
@@ -202,8 +208,10 @@ export function PageOrderTab({ layout, sourcePages, pageCount }: Props) {
         >
           <div className="flex items-center gap-1.5 text-[12px] font-medium text-fg2">
             <span className="text-accent">★</span>
-            <strong className="text-fg font-semibold">Cover sheet</strong>
-            <span>— print front only, back stays blank</span>
+            <strong className="text-fg font-semibold">
+              {t("pageOrder.coverSheet")}
+            </strong>
+            <span>{t("pageOrder.coverInstruction")}</span>
           </div>
           <SheetCard
             sheet={coverSheet}
@@ -217,11 +225,10 @@ export function PageOrderTab({ layout, sourcePages, pageCount }: Props) {
       {innerSheets.length > 0 && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between text-[13px] font-semibold text-fg">
-            <span>Inner booklet</span>
+            <span>{t("pageOrder.innerBooklet")}</span>
             <span className="text-[12px] font-normal font-mono text-fg3">
-              {innerSheets.length}{" "}
-              {innerSheets.length === 1 ? "sheet" : "sheets"} · print
-              double-sided
+              {t("pageOrder.sheets", { count: innerSheets.length })} ·{" "}
+              {t("pageOrder.printDoubleSided")}
             </span>
           </div>
           {innerSheets.map((sheet, i) => (
