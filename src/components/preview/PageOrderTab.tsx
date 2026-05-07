@@ -143,14 +143,14 @@ function SheetCard({
           )}
         </div>
       </div>
-      <div className="divide-y divide-line">
+      <div className="flex divide-y divide-line">
         {[
           { label: "Front", side: sheet.front, isFront: true },
           { label: "Back", side: sheet.back, isFront: false },
         ].map(({ label, side, isFront }) => (
           <div
             key={label}
-            className="px-4 py-3 flex flex-col gap-2"
+            className="px-4 py-3 flex flex-col gap-2 w-full"
             style={isCover && !isFront ? { opacity: 0.35 } : undefined}
           >
             <div className="flex items-center gap-1.5 text-[12px] text-fg2 font-medium">
@@ -162,7 +162,7 @@ function SheetCard({
                 side {isFront ? 1 : 2}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center w-full justify-center">
               <PageThumb
                 idx={side.left}
                 sourcePages={sourcePages}
