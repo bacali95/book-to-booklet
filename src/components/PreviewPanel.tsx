@@ -89,7 +89,7 @@ export function PreviewPanel({ state }: { state: BookletState }) {
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-h-0 overflow-y-auto p-6">
+      <div className={`flex-1 min-h-0 p-6 ${tab === "book" ? "overflow-hidden" : "overflow-y-auto"}`}>
         {tab === "sheets" && (
           <PageOrderTab
             layout={layout}

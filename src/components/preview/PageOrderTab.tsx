@@ -9,7 +9,7 @@ interface Props {
   pageCount: number;
 }
 
-const THUMB_H = 110;
+const THUMB_H = 250;
 
 function PageThumb({
   idx,
@@ -32,10 +32,14 @@ function PageThumb({
     const srcH = src.naturalH || c.height;
     const srcW = src.naturalW || c.width;
     const s = THUMB_H / srcH;
+    const DPR = 2;
     const el = document.createElement("canvas");
-    el.width = Math.round(srcW * s);
-    el.height = Math.round(srcH * s);
-    el.getContext("2d")!.drawImage(c, 0, 0, el.width, el.height);
+    el.width = Math.round(srcW * s * DPR);
+    el.height = THUMB_H * DPR;
+    const ctx = el.getContext("2d")!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(c, 0, 0, el.width, el.height);
     return el.toDataURL();
   }, [src]);
 

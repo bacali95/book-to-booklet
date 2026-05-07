@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 import { useTranslation } from "react-i18next";
 import type { Direction } from "@/lib/engine";
 import type { SourcePage } from "@/lib/renderer";
@@ -84,11 +90,21 @@ export function BookViewTab({ pageCount, direction, sourcePages }: Props) {
   const [idx, setIdx] = useState(0);
   useEffect(() => setIdx(0), [pageCount, direction]);
 
+  const bookAreaRef = useRef<HTMLDivElement>(null);
+  const [bookAreaH, setBookAreaH] = useState(400);
+  useLayoutEffect(() => {
+    const el = bookAreaRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setBookAreaH(el.clientHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   const src = sourcePages[0];
   const aspect = src
     ? (src.naturalW || src.canvas.width) / (src.naturalH || src.canvas.height)
     : 1 / Math.SQRT2;
-  const H = Math.min(300, Math.max(220, window.innerHeight - 420));
+  const H = Math.max(180, bookAreaH - 8);
   const W = Math.round(H * aspect);
 
   const spread = spreads[idx];
@@ -155,49 +171,91 @@ export function BookViewTab({ pageCount, direction, sourcePages }: Props) {
     "w-8 h-8 rounded-lg border border-line bg-e2 text-fg2 flex items-center justify-center cursor-pointer hover:bg-e3 disabled:opacity-30 disabled:cursor-not-allowed transition-all";
 
   return (
-    <div className="flex flex-col items-center gap-6">
-      <div className="flex items-center justify-center">
-        <div className="flex items-stretch shadow-xl rounded overflow-hidden">
-          <div className="relative bg-paper" style={{ width: W, height: H }}>
+    <div className="h-full flex flex-col items-center gap-4">
+      {/* Book display — grows to fill all available height */}
+      <div
+        ref={bookAreaRef}
+        className="flex-1 min-h-0 w-full flex items-center justify-center"
+      >
+        {spread.isCover || spread.isBack ? (
+          /* Single page centered for cover / back cover */
+          <div
+            className="relative bg-paper rounded overflow-hidden"
+            style={{
+              width: W,
+              height: H,
+              boxShadow:
+                "0 8px 32px color-mix(in oklch, var(--fg) 40%, transparent), 0 2px 8px color-mix(in oklch, var(--fg) 22%, transparent)",
+            }}
+          >
             <BookHalf
-              pageIdx={spread.left}
+              pageIdx={spread.isCover ? spread.right : spread.left}
               sourcePages={sourcePages}
               width={W}
               height={H}
             />
-            {spread.left >= 0 && (
-              <div className="absolute bottom-1.5 start-2 text-[9px] font-mono text-paper-fg/50">
-                {spread.left + 1}
-              </div>
-            )}
           </div>
-          <div className="w-[2px] self-stretch bg-line/50" />
-          <div className="relative bg-paper" style={{ width: W, height: H }}>
-            <BookHalf
-              pageIdx={spread.right}
-              sourcePages={sourcePages}
-              width={W}
-              height={H}
+        ) : (
+          /* Two-page spread */
+          <div
+            className="flex items-stretch rounded overflow-hidden"
+            style={{
+              boxShadow:
+                "0 8px 32px color-mix(in oklch, var(--fg) 40%, transparent), 0 2px 8px color-mix(in oklch, var(--fg) 22%, transparent)",
+            }}
+          >
+            <div className="relative bg-paper" style={{ width: W, height: H }}>
+              <BookHalf
+                pageIdx={spread.left}
+                sourcePages={sourcePages}
+                width={W}
+                height={H}
+              />
+              {spread.left >= 0 && (
+                <div className="absolute bottom-1.5 start-2 text-[9px] font-mono text-paper-fg/50">
+                  {spread.left + 1}
+                </div>
+              )}
+            </div>
+            <div
+              className="w-2 self-stretch shrink-0"
+              style={{
+                background:
+                  "linear-gradient(to right, color-mix(in oklch, var(--fg) 45%, transparent) 0%, color-mix(in oklch, var(--fg) 6%, transparent) 40%, color-mix(in oklch, var(--fg) 6%, transparent) 60%, color-mix(in oklch, var(--fg) 45%, transparent) 100%)",
+              }}
             />
-            {spread.right >= 0 && (
-              <div className="absolute bottom-1.5 end-2 text-[9px] font-mono text-paper-fg/50">
-                {spread.right + 1}
-              </div>
-            )}
+            <div className="relative bg-paper" style={{ width: W, height: H }}>
+              <BookHalf
+                pageIdx={spread.right}
+                sourcePages={sourcePages}
+                width={W}
+                height={H}
+              />
+              {spread.right >= 0 && (
+                <div className="absolute bottom-1.5 end-2 text-[9px] font-mono text-paper-fg/50">
+                  {spread.right + 1}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      <div className="flex items-center gap-4 w-full max-w-xs">
+      <div className="shrink-0 flex items-center gap-4 w-full max-w-xs">
         <button
           className={btnCls}
-          disabled={idx === 0}
+          disabled={
+            direction === "rtl" ? idx === spreads.length - 1 : idx === 0
+          }
           onClick={direction === "rtl" ? next : prev}
         >
           <ArrowLeft />
         </button>
         <div className="flex-1 flex flex-col items-center gap-1.5">
-          <div className="w-full h-1 bg-e3 rounded-full overflow-hidden">
+          <div
+            className="w-full h-1 bg-e3 rounded-full overflow-hidden"
+            dir={direction === "rtl" ? "rtl" : "ltr"}
+          >
             <div
               className="h-full bg-accent rounded-full transition-[width] duration-200"
               style={{ width: `${pct}%` }}
@@ -207,14 +265,16 @@ export function BookViewTab({ pageCount, direction, sourcePages }: Props) {
         </div>
         <button
           className={btnCls}
-          disabled={idx === spreads.length - 1}
+          disabled={
+            direction === "rtl" ? idx === 0 : idx === spreads.length - 1
+          }
           onClick={direction === "rtl" ? prev : next}
         >
           <ArrowRight />
         </button>
       </div>
 
-      <div>
+      <div className="shrink-0">
         <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-e2 border border-line text-[11px] font-mono text-fg3">
           {direction === "rtl"
             ? t("bookView.rtlLabel")

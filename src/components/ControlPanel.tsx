@@ -270,8 +270,8 @@ export function ControlPanel({ state, onUpdateSettings, onGenerate }: Props) {
               onUpdateSettings({ direction: v as "ltr" | "rtl" })
             }
             options={[
-              { value: "ltr", label: "LTR", sub: "←" },
-              { value: "rtl", label: "RTL", sub: "→" },
+              { value: "ltr", label: "LTR", sub: "→" },
+              { value: "rtl", label: "RTL", sub: "←" },
             ]}
           />
 

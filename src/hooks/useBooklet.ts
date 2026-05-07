@@ -36,7 +36,7 @@ export interface BookletSettings {
 
 export const DEFAULT_SETTINGS: BookletSettings = {
   direction: "ltr",
-  signatureSize: 8,
+  signatureSize: 0,
   flip: "long",
   paperSize: "A4",
   scaling: "fit",
