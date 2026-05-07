@@ -107,6 +107,19 @@ export function ControlPanel({
             value={settings.flip}
             onChange={(v) => onUpdateSettings({ flip: v })}
           />
+          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+            In your printer dialog:{" "}
+            <span className="font-medium text-foreground">
+              Orientation → Landscape
+            </span>
+            {" · "}
+            <span className="font-medium text-foreground">
+              Two-sided →{" "}
+              {settings.flip === "long"
+                ? "Flip on Long Edge"
+                : "Flip on Short Edge"}
+            </span>
+          </p>
         </FormRow>
       </Accordion>
 

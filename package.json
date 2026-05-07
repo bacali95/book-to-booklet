@@ -1,5 +1,5 @@
 {
-  "name": "book-to-booklet",
+  "name": "pdf-to-booklet",
   "private": true,
   "version": "0.1.0",
   "type": "module",

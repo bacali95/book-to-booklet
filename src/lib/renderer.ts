@@ -1,5 +1,5 @@
 import * as pdfjsLib from "pdfjs-dist";
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { PDFDocument, rgb, degrees, StandardFonts } from "pdf-lib";
 import {
   getPaperSize,
   creepOffset,
@@ -62,6 +62,7 @@ export interface GenerateOptions {
   pageNumbers?: "none" | "bottom-center" | "outer" | "inner";
   creepMm?: number;
   direction?: Direction;
+  flip?: "long" | "short";
   onProgress?: (done: number, total: number) => void;
 }
 
@@ -82,6 +83,7 @@ export async function generateBookletPdf(
     pageNumbers = "none",
     creepMm = 0,
     direction = "ltr",
+    flip = "long",
     onProgress,
   } = opts;
 
@@ -102,6 +104,9 @@ export async function generateBookletPdf(
 
   for (const op of layout.outputPages) {
     const page = doc.addPage([outW, outH]);
+    if (flip === "long" && op.side === "back") {
+      page.setRotation(degrees(180));
+    }
     const { left: lIdx, right: rIdx, sheetIndex } = op;
 
     const shPerSig = layout.sheetsPerSignature;

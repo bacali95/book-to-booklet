@@ -56,7 +56,7 @@ export default function App() {
       <footer className="border-t border-border py-4 text-center text-xs text-muted-foreground">
         Book to Booklet Converter —{" "}
         <a
-          href="https://github.com/nasreddine-bacali/book-to-booklet"
+          href="https://github.com/bacali95/pdf-to-booklet"
           target="_blank"
           rel="noopener noreferrer"
           className="underline underline-offset-2 hover:text-foreground"

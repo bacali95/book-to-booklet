@@ -185,6 +185,7 @@ export function useBooklet() {
         pageNumbers: settings.pageNumbers,
         creepMm: settings.creepMm,
         direction: settings.direction,
+        flip: settings.flip,
         onProgress: (done, total) => {
           setState((s) => ({
             ...s,
