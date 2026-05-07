@@ -1,22 +1,25 @@
-import { useEffect, useState } from 'react'
-import { Moon, Sun, BookMarked } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { ControlPanel } from './components/ControlPanel'
-import { PreviewPanel } from './components/PreviewPanel'
-import { useBooklet } from './hooks/useBooklet'
+import { useEffect, useState } from "react";
+import { Moon, Sun, BookMarked } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ControlPanel } from "./components/ControlPanel";
+import { PreviewPanel } from "./components/PreviewPanel";
+import { useBooklet } from "./hooks/useBooklet";
 
 export default function App() {
   const [dark, setDark] = useState(() => {
-    const saved = localStorage.getItem('theme')
-    return saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
-  })
+    const saved = localStorage.getItem("theme");
+    return saved
+      ? saved === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+  });
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
-    localStorage.setItem('theme', dark ? 'dark' : 'light')
-  }, [dark])
+    document.documentElement.classList.toggle("dark", dark);
+    localStorage.setItem("theme", dark ? "dark" : "light");
+  }, [dark]);
 
-  const { state, updateSettings, loadPdf, clearSource, generate } = useBooklet()
+  const { state, updateSettings, loadPdf, clearSource, generate } =
+    useBooklet();
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -27,7 +30,11 @@ export default function App() {
             <BookMarked className="size-5 text-primary" />
             <h1 className="font-semibold text-base">Book to Booklet</h1>
           </div>
-          <Button variant="ghost" size="icon" onClick={() => setDark(d => !d)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setDark((d) => !d)}
+          >
             {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
           </Button>
         </div>
@@ -47,7 +54,7 @@ export default function App() {
 
       {/* Footer */}
       <footer className="border-t border-border py-4 text-center text-xs text-muted-foreground">
-        Book to Booklet Converter —{' '}
+        Book to Booklet Converter —{" "}
         <a
           href="https://github.com/nasreddine-bacali/book-to-booklet"
           target="_blank"
@@ -55,9 +62,9 @@ export default function App() {
           className="underline underline-offset-2 hover:text-foreground"
         >
           open source on GitHub
-        </a>.
-        {' '}Print with <em>duplex, flip on long edge</em> for correct results.
+        </a>
+        . Print with <em>duplex, flip on long edge</em> for correct results.
       </footer>
     </div>
-  )
+  );
 }
